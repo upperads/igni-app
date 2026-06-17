@@ -1,9 +1,13 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: Fase 4 — Execução CONCLUÍDA. **Inception (Fases 1–4) completa.**
-- **Aprovado até**: Fases 1, 2 e 3 aprovadas em 16/06
-- **Próximo passo**: baseline de docs + CLAUDE.md **commitado** (git limpo). Próximo: iniciar implementação no Claude Code — Engenheiro de Execução, **schema primeiro**, começando pela US-01 (Épico M1 — Tenancy & Auth). Depois, ciclo leve por feature.
+- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception (Fases 1–4) completa e aprovada. **Wave 1 (fundação) CONCLUÍDA e commitada.**
+- **Aprovado até**: Fases 1, 2 e 3 aprovadas em 16/06; stack do M1 fechada em 17/06 (ADR-004/005)
+- **Próximo passo**: **Checkpoint 1 aguardando aprovação do usuário.** Em seguida: **Wave 2 — US-01 schema-first (TDD)**: migration `tenant`+`usuario` com `tenant_id` + RLS FORCE; teste de isolamento A↛B (RED→GREEN); caso de uso criar oficina + admin + template.
+- **Execução — ondas**:
+  - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Tudo verde (typecheck/lint/test/build); drizzle conecta. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
+  - Wave 2 (US-01) — próxima.
+  - Wave 3 (US-02/US-03 + Supabase local p/ Auth) — pendente.
 - **Ambiguidades abertas** (não bloqueiam o handoff):
   - Marca/nome (codinome PRONTO; finalistas Igni/Torq; falta checar domínio/INPI)
   - Metas numéricas de sucesso e faixas de preço — calibrar
