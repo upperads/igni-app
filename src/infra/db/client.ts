@@ -1,20 +1,18 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import * as schema from "./schema";
+import { createDatabase } from "./connection";
 
 /**
- * Conexão administrativa do Postgres (migrations e rotinas internas controladas).
+ * Instância única do banco para uso da aplicação (lê `DATABASE_URL`).
  *
- * ATENÇÃO (ADR-005): este cliente NÃO aplica RLS por si só. O acesso a dados por
- * tenant — que dropa privilégio para um papel não-privilegiado e faz
- * `SET LOCAL app.current_tenant` por transação — virá num helper dedicado na US-01.
- * Use este `db` apenas onde o escopo de tenant não se aplica (ex.: migrations).
+ * - `db`        → conexão privilegiada: migrations e onboarding (criar oficina), onde ainda
+ *                 não há um tenant corrente. NÃO aplica RLS (ADR-005).
+ * - `withTenant`→ acesso a dados escopado ao tenant, com RLS ativa. É o caminho normal das
+ *                 rotas/casos de uso após a autenticação.
  */
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL não definido — veja .env.example");
 }
 
-const queryClient = postgres(connectionString);
-
-export const db = drizzle(queryClient, { schema });
+export const database = createDatabase(connectionString);
+export const db = database.db;
+export const withTenant = database.withTenant;

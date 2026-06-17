@@ -1,13 +1,17 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception (Fases 1–4) completa e aprovada. **Wave 1 (fundação) CONCLUÍDA e commitada.**
-- **Aprovado até**: Fases 1, 2 e 3 aprovadas em 16/06; stack do M1 fechada em 17/06 (ADR-004/005)
-- **Próximo passo**: **Checkpoint 1 aguardando aprovação do usuário.** Em seguida: **Wave 2 — US-01 schema-first (TDD)**: migration `tenant`+`usuario` com `tenant_id` + RLS FORCE; teste de isolamento A↛B (RED→GREEN); caso de uso criar oficina + admin + template.
+- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception completa. **Wave 1 (fundação) e Wave 2 (US-01) CONCLUÍDAS, revisadas e commitadas.**
+- **Aprovado até**: Fases 1–3 (16/06); stack do M1 (ADR-004/005, 17/06); Checkpoint 1 aprovado.
+- **Próximo passo**: **Checkpoint 2 (US-01) aguardando aprovação.** Decisão pendente: construir a **UI/rota de onboarding** agora (fecha US-01 como fatia vertical, entra em Next 16) ou agrupá-la com login/2FA na **Wave 3** (recomendado). Depois: **US-02 (auth/2FA) + US-03 (RBAC)** subindo o Supabase local.
 - **Execução — ondas**:
-  - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Tudo verde (typecheck/lint/test/build); drizzle conecta. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
-  - Wave 2 (US-01) — próxima.
-  - Wave 3 (US-02/US-03 + Supabase local p/ Auth) — pendente.
+  - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
+  - Wave 2 (US-01) ✅ — schema `tenant`/`usuario`/`estacao` + migrations (tabelas + RLS); enforcement RLS via `withTenant` (`SET LOCAL ROLE app_user` + `set_config app.current_tenant`); caso de uso `criarOficina` (tenant + admin `dono` + seed de estações do template) com email duplicado tratado. TDD RED→GREEN no isolamento. **12 testes** verdes; typecheck/lint/build verdes. Review independente (subagent): PASS nas 3 etapas, sem furo de confidencialidade. Achado ALTA (validação de UUID no `withTenant`) corrigido.
+  - Wave 3 (US-02/US-03 + Supabase local p/ Auth) — próxima.
+- **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
+  - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
+  - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.
+  - (MÉDIA, mitigado) GUC `app.current_tenant` é re-gravável — invariante "sem SQL raw dentro de `withTenant`" documentada no código; manter na revisão.
 - **Ambiguidades abertas** (não bloqueiam o handoff):
   - Marca/nome (codinome PRONTO; finalistas Igni/Torq; falta checar domínio/INPI)
   - Metas numéricas de sucesso e faixas de preço — calibrar
