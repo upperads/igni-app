@@ -1,0 +1,24 @@
+# Postgres local para desenvolvimento e testes (Wave 1+).
+# O stack Supabase completo (Auth/Realtime) entra na Wave 3 via `supabase` CLI.
+# Subir:   docker compose up -d db
+# Derrubar: docker compose down        (com -v para apagar os dados)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: igni-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: igni
+    ports:
+      - "5433:5432"
+    volumes:
+      - igni-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d igni"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  igni-db-data:
