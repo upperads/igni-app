@@ -11,8 +11,9 @@ honesta e enxuta, não mais um ERP. Ver Business Case em `/docs/01_conception.md
 
 ## Stack e padrões (regras rígidas)
 - **Linguagem/framework**: Next.js + TypeScript strict (zero `any`). MVP full-stack (ADR-003).
-- **Banco**: PostgreSQL com **Row-Level Security** por tenant (ADR-001), via Prisma (migrations versionadas) — Drizzle é alternativa aprovada.
-- **Tempo real**: pub/sub (push) para os painéis, alvo < 2s (ADR-002).
+- **Banco**: PostgreSQL gerenciado (**Supabase**, ADR-004) com **Row-Level Security** por tenant (ADR-001), via **Drizzle** + drizzle-kit (migrations versionadas em SQL, ADR-005). Enforcement de RLS por papel não-privilegiado + `SET LOCAL app.current_tenant` por transação.
+- **Auth**: Supabase Auth (RBAC + MFA/TOTP para admin), ADR-004.
+- **Tempo real**: Supabase Realtime (pub/sub push) para os painéis, alvo < 2s (ADR-002/004).
 - **Domínio desacoplado**: a lógica de negócio (máquina de estados, triagem) vive separada da camada web, para extração futura de serviços e para testabilidade.
 - **Convenções de pasta**: `/src` com domínio (regras), aplicação (casos de uso/API), infra (DB/integrações) e UI separados.
 - **Estilo**: Clean Code, SOLID, lint estrito.

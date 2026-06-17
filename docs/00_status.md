@@ -9,8 +9,8 @@
   - Metas numéricas de sucesso e faixas de preço — calibrar
   - Uptime alvo — a definir
   - Validar contraste da paleta de sinal sobre grafite (WCAG) na implementação
-  - Escolha final de fornecedores (ORM, auth, realtime, WhatsApp) — ADR na implementação
-- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next) — em `/docs/adr/`
+  - Fornecedores: **resolvido** — Supabase (Postgres+RLS+Auth+Realtime, ADR-004) + Drizzle (ADR-005). **WhatsApp** ainda em aberto → decide no M7.
+- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), **004 (plataforma Supabase)**, **005 (Drizzle + enforcement RLS)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
 - **Última atualização**: 16/06
