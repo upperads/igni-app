@@ -37,3 +37,14 @@ export class ContaBloqueadaError extends Error {
     this.name = "ContaBloqueadaError";
   }
 }
+
+/** Papel sem permissão para a ação solicitada (RBAC, RNF-SEC-02 / US-03). */
+export class AutorizacaoNegadaError extends Error {
+  constructor(
+    public readonly papel: string,
+    public readonly acao: string,
+  ) {
+    super(`Permissão negada: o papel '${papel}' não pode '${acao}'.`);
+    this.name = "AutorizacaoNegadaError";
+  }
+}
