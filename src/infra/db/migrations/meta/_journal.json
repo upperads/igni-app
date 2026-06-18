@@ -36,6 +36,13 @@
       "when": 1781744823711,
       "tag": "0004_rls_tentativa_login",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781818589998,
+      "tag": "0005_rls_cloud_compat",
+      "breakpoints": true
     }
   ]
 }
