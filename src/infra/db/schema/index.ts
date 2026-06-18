@@ -6,3 +6,4 @@ export * from "./enums";
 export * from "./tenant";
 export * from "./usuario";
 export * from "./estacao";
+export * from "./tentativa-login";
