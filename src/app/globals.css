@@ -1,26 +1,65 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+  Design system Igni (docs/03b_design.md). Board escuro de controle: grafite de cast QUENTE
+  (não preto frio), paleta de SINAL de 5 cores (que É o dado, não enfeite), e âmbar como marca +
+  segurança estrutural (listra de risco), nunca como status. Par tipográfico placa + instrumento.
+*/
+@theme {
+  /* Canvas grafite quente */
+  --color-grafite-900: #14161a;
+  --color-grafite-850: #181b21;
+  --color-grafite-800: #1e2127;
+  --color-grafite-700: #2a2e37;
+  --color-grafite-600: #3a3f4b;
+
+  /* Aço — texto */
+  --color-aco-100: #e8ebf1;
+  --color-aco-200: #c7ccd6;
+  --color-aco-400: #8b919e;
+
+  /* Âmbar — marca + sinalização estrutural (risco/foco/ativo). Nunca status. */
+  --color-ambar-500: #f2a93d;
+  --color-ambar-600: #d88e22;
+
+  /* Paleta de sinal/triagem — só status, fosca (não neon) */
+  --color-sinal-vermelho: #e5392f;
+  --color-sinal-laranja: #fb7a28;
+  --color-sinal-amarelo: #e8c53a;
+  --color-sinal-verde: #46b46e;
+  --color-sinal-azul: #4a90d9;
+
+  /* Portal do cliente (tema claro, quente — não creme-clichê) */
+  --color-osso-50: #f7f6f3;
+
+  /* Tipografia: placa industrial (display) · grotesca robusta (corpo) · mono (instrumento) */
+  --font-display: var(--font-saira), "Arial Narrow", sans-serif;
+  --font-body: var(--font-archivo), system-ui, sans-serif;
+  --font-mono: var(--font-spline-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--color-grafite-900);
+    color: var(--color-aco-100);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Foco visível âmbar (WCAG 2.2) — estrutural, combina com a marca. */
+  :focus-visible {
+    outline: 2px solid var(--color-ambar-500);
+    outline-offset: 2px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Trilho de risco: listras de hazard a 45° quando há crítico/atraso. */
+.trilho-alarme {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-ambar-500) 0 14px,
+    var(--color-grafite-900) 14px 28px
+  );
 }

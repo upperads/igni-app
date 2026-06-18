@@ -29,6 +29,10 @@ Thumbs.db
 .idea/
 *.swp
 
+# Playwright (screenshots/logs de verificação visual)
+.playwright-mcp/
+/igni-painel-*.png
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
