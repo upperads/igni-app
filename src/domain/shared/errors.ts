@@ -21,3 +21,19 @@ export class TenantContextoInvalidoError extends Error {
     this.name = "TenantContextoInvalidoError";
   }
 }
+
+/** Credenciais de login inválidas (e-mail/senha). Mensagem genérica de propósito (não revela qual). */
+export class CredenciaisInvalidasError extends Error {
+  constructor(public readonly tentativasRestantes: number) {
+    super("E-mail ou senha inválidos.");
+    this.name = "CredenciaisInvalidasError";
+  }
+}
+
+/** Conta bloqueada por exceder o limite de tentativas (RNF-SEC-05). */
+export class ContaBloqueadaError extends Error {
+  constructor(public readonly desbloqueioEm: Date) {
+    super("Conta temporariamente bloqueada por excesso de tentativas. Tente novamente mais tarde.");
+    this.name = "ContaBloqueadaError";
+  }
+}
