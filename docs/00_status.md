@@ -7,9 +7,9 @@
 - **Ops / Infra (ADR-007)**:
   - **Railway**: projeto `igni-app` criado e linkado (workspace pessoal, env `production`, sem serviço ainda). Deploy depois.
   - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). Push do `main` feito (`upperads/igni-app`).
-  - **Supabase cloud**: ⛔ **BLOQUEADO** — limite de 2 projetos free ATIVOS por conta. Apagar um projeto inativo não liberou. Para criar o `igni`: **pausar um ativo** (orbit-staging ou adm-levellog-prod) **ou upgrade de org p/ Pro**. Decisão de billing do dono.
-  - **MCP Supabase**: OAuth iniciado; aguardando o usuário completar (ou colar a URL de callback).
-  - Pendente após destravar: criar `igni` cloud + `db:migrate` (tratar `app_user`), secrets no Railway, conectar GitHub→Railway, branch protection.
+  - **Supabase cloud**: ✅ projeto `igni` criado (ref `gtfgtkwmsnnzajbgrlvw`, org relatorio_revolute, sa-east-1), após o dono pausar o orbit-staging. **Migrations aplicadas** (via session pooler aws-1). **Verificado**: tabelas com `rls=true, force=false`; insert privilegiado OK; `app_user` barrado por RLS (0 linhas de outro tenant). Conexão = session pooler aws-1, porta 5432, `?sslmode=require`. Credenciais (gitignored) no `.env` local, bloco comentado "CLOUD".
+  - **MCP Supabase**: OAuth ainda não concluído (não-bloqueante; usei a CLI).
+  - Pendente (no deploy, exige serviço Railway): secrets no Railway (DATABASE_URL cloud + chaves), conectar GitHub→Railway (auto-deploy), branch protection, 1º deploy.
 - **Supabase local**: stack no ar, portas **544xx** (API `54421`, DB `54422`). Chaves locais no `.env`. MFA TOTP habilitado; senha mínima 8.
 - **Execução — ondas**:
   - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
