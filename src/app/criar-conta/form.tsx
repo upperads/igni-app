@@ -5,6 +5,7 @@ import { useActionState, useState } from "react";
 import { forcaSenha, type ForcaSenha } from "@/domain/auth/forca-senha";
 import { Button } from "@/ui/components/button";
 import { cn } from "@/ui/cn";
+import { INPUT_CLASS, LABEL_CLASS, TextField } from "@/ui/components/text-field";
 import { acaoCriarConta, type EstadoCriarConta } from "./actions";
 
 const RAMOS_UI = [
@@ -14,29 +15,6 @@ const RAMOS_UI = [
 ] as const;
 
 const ESTADO_INICIAL: EstadoCriarConta = {};
-
-const INPUT =
-  "min-h-12 rounded-md border border-grafite-600 bg-grafite-800 px-3 font-body text-sm text-aco-100 placeholder:text-aco-400";
-const LABEL = "font-mono text-xs uppercase tracking-wide text-aco-400";
-
-function Campo({
-  label,
-  name,
-  type = "text",
-}: {
-  label: string;
-  name: string;
-  type?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={name} className={LABEL}>
-        {label}
-      </label>
-      <input id={name} name={name} type={type} required className={INPUT} />
-    </div>
-  );
-}
 
 function MedidorForca({ forca }: { forca: ForcaSenha }) {
   const cor =
@@ -74,13 +52,13 @@ export function FormCriarConta() {
 
   return (
     <form action={acao} className="flex flex-col gap-4">
-      <Campo label="Nome da oficina" name="nomeOficina" />
+      <TextField label="Nome da oficina" name="nomeOficina" required />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="ramo" className={LABEL}>
+        <label htmlFor="ramo" className={LABEL_CLASS}>
           Ramo
         </label>
-        <select id="ramo" name="ramo" required defaultValue="retifica_leve" className={INPUT}>
+        <select id="ramo" name="ramo" required defaultValue="retifica_leve" className={INPUT_CLASS}>
           {RAMOS_UI.map((r) => (
             <option key={r.valor} value={r.valor}>
               {r.rotulo}
@@ -89,11 +67,11 @@ export function FormCriarConta() {
         </select>
       </div>
 
-      <Campo label="Seu nome" name="nome" />
-      <Campo label="E-mail" name="email" type="email" />
+      <TextField label="Seu nome" name="nome" required />
+      <TextField label="E-mail" name="email" type="email" required autoComplete="email" />
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="senha" className={LABEL}>
+        <label htmlFor="senha" className={LABEL_CLASS}>
           Senha
         </label>
         <input
@@ -102,9 +80,10 @@ export function FormCriarConta() {
           type="password"
           required
           minLength={8}
+          autoComplete="new-password"
           value={senha}
           onChange={(e) => setSenha(e.target.value)}
-          className={INPUT}
+          className={INPUT_CLASS}
           aria-describedby="forca-senha"
         />
         <div id="forca-senha">{senha.length > 0 ? <MedidorForca forca={forca} /> : null}</div>

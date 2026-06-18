@@ -1,9 +1,13 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   criarOficina,
   type CriarOficinaInput,
   type CriarOficinaResult,
 } from "@/application/criar-oficina";
+import { login, type LoginInput, type LoginResult } from "@/application/login";
 import { createSupabaseAuthIdentity } from "@/infra/auth/supabase-identity";
+import { createSupabaseSignIn } from "@/infra/auth/supabase-signin";
+import { politicaLockoutDoEnv } from "@/infra/config/auth";
 import { db } from "@/infra/db/client";
 
 /**
@@ -25,4 +29,16 @@ export function registrarOficina(input: CriarOficinaInput): Promise<CriarOficina
     env("SUPABASE_SERVICE_ROLE_KEY"),
   );
   return criarOficina({ db, auth }, input);
+}
+
+/**
+ * Login: recebe o `SupabaseClient` da rota (com cookies de sessão) e roda o caso de uso `login`
+ * com o db privilegiado + a política de lockout do ambiente. O `signInWithPassword` por dentro
+ * estabelece a sessão nos cookies.
+ */
+export function autenticar(supabase: SupabaseClient, input: LoginInput): Promise<LoginResult> {
+  return login(
+    { db, auth: createSupabaseSignIn(supabase), politica: politicaLockoutDoEnv() },
+    input,
+  );
 }
