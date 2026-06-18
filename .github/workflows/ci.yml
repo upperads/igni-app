@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verificar:
+    name: Build · Lint · Typecheck · Testes · Migrations
+    runs-on: ubuntu-latest
+
+    # Postgres efêmero para a suíte de integração/RLS (mesmo papel do docker-compose local).
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: igni_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d igni_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Banco para build e testes (o build não conecta; só precisa da var existir).
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/igni_test
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/igni_test
+      # Placeholders de Supabase (o build avalia módulos; runtime real usa os secrets do deploy).
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54421
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      # Ordem fail-fast (devdead-ops): build é a falha mais barata, depois estática, depois testes.
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Testes (unidade + integração + RLS)
+        run: pnpm test
+
+      # Garante que o schema Drizzle e as migrations versionadas não divergiram (ghost migrations).
+      - name: Checagem de migrations
+        run: |
+          pnpm db:generate
+          if [ -n "$(git status --porcelain src/infra/db/migrations)" ]; then
+            echo "::error::Schema mudou sem migration gerada/commitada. Rode 'pnpm db:generate' e commite."
+            git --no-pager diff -- src/infra/db/migrations
+            exit 1
+          fi
