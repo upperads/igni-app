@@ -1,3 +1,4 @@
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+# pnpm v10 bloqueia scripts de instalação por padrão. A CLI do Supabase baixa seu binário no
+# postinstall — precisa estar explicitamente liberada aqui.
+onlyBuiltDependencies:
+  - supabase

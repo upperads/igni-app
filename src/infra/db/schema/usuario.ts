@@ -14,6 +14,10 @@ export const usuario = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenant.id, { onDelete: "cascade" }),
+    // Link lógico para `auth.users.id` do Supabase (ADR-006). SEM FK rígida de propósito:
+    // a tabela `auth.users` só existe no Postgres do Supabase, não no Postgres leve de testes.
+    // Nulo enquanto o usuário não tem identidade (ex.: convidado); o onboarding preenche.
+    authUserId: uuid("auth_user_id").unique(),
     nome: text("nome").notNull(),
     email: text("email").notNull(),
     papel: papelUsuario("papel").notNull(),

@@ -1,13 +1,17 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception completa. **Wave 1 (fundação) e Wave 2 (US-01) CONCLUÍDAS, revisadas e commitadas.**
-- **Aprovado até**: Fases 1–3 (16/06); stack do M1 (ADR-004/005, 17/06); Checkpoint 1 aprovado.
-- **Próximo passo**: **Checkpoint 2 (US-01) aguardando aprovação.** Decisão pendente: construir a **UI/rota de onboarding** agora (fecha US-01 como fatia vertical, entra em Next 16) ou agrupá-la com login/2FA na **Wave 3** (recomendado). Depois: **US-02 (auth/2FA) + US-03 (RBAC)** subindo o Supabase local.
+- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception completa. Waves 1, 2 (US-01) e **3a (fundação de auth) CONCLUÍDAS**.
+- **Aprovado até**: Fases 1–3; stack do M1 (ADR-004/005); arquitetura de auth (ADR-006); Checkpoints 1 e 2 aprovados.
+- **Próximo passo**: **Checkpoint 3a aguardando aprovação.** Depois: **Wave 3b — US-02** (login + 2FA admin AAL2 + lockout por contador + recuperação).
+- **Supabase local**: stack no ar, portas remapeadas p/ **544xx** (config.toml) — API `54421`, DB `54422`. Chaves locais no `.env` (gitignored). MFA TOTP habilitado; senha mínima 8.
 - **Execução — ondas**:
   - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
   - Wave 2 (US-01) ✅ — schema `tenant`/`usuario`/`estacao` + migrations (tabelas + RLS); enforcement RLS via `withTenant` (`SET LOCAL ROLE app_user` + `set_config app.current_tenant`); caso de uso `criarOficina` (tenant + admin `dono` + seed de estações do template) com email duplicado tratado. TDD RED→GREEN no isolamento. **12 testes** verdes; typecheck/lint/build verdes. Review independente (subagent): PASS nas 3 etapas, sem furo de confidencialidade. Achado ALTA (validação de UUID no `withTenant`) corrigido.
-  - Wave 3 (US-02/US-03 + Supabase local p/ Auth) — próxima.
+  - Wave 3a (fundação de auth) ✅ — Supabase local no ar (Postgres único, ADR-006); delta `auth_user_id` em `usuario` (migration 0002, link lógico sem FK rígida p/ rodar no PG de testes); `@supabase/ssr` + `supabase-js`; `AuthIdentityPort` (porta hexagonal) + adaptador Supabase Admin + fake; `criarOficina` agora cria a identidade com **compensação (saga)** + valida senha. **13 testes** verdes (fake no PG leve); migrations aplicadas no Supabase; tabelas+RLS+`app_user` convivendo com `auth.users` (verificado).
+  - Wave 3b (US-02 login/2FA/lockout) — próxima.
+  - Wave 3c (US-03 RBAC) — pendente.
+  - Wave 3d (UI onboarding/login/2FA, Next 16) — pendente.
 - **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
   - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
   - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.

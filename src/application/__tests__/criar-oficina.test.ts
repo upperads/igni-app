@@ -5,9 +5,20 @@ import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/err
 import type { Database } from "@/infra/db/connection";
 import { estacao, tenant, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
+import { FakeAuthIdentity } from "@/test/fake-auth";
+
+function inputBase(over: Partial<CriarOficinaInput> = {}): CriarOficinaInput {
+  return {
+    nomeOficina: "Retífica Central",
+    ramo: "retifica_leve",
+    admin: { nome: "Maria", email: "maria@central.com", senha: "senha-forte-1" },
+    ...over,
+  };
+}
 
 describe("criarOficina (US-01)", () => {
   let database: Database;
+  let auth: FakeAuthIdentity;
 
   beforeAll(async () => {
     await resetAndMigrate();
@@ -22,69 +33,75 @@ describe("criarOficina (US-01)", () => {
     await database.db.delete(usuario);
     await database.db.delete(estacao);
     await database.db.delete(tenant);
+    auth = new FakeAuthIdentity();
   });
 
-  it("cria tenant + admin (dono) + estações do template, normalizando o e-mail", async () => {
-    const res = await criarOficina(database.db, {
-      nomeOficina: "  Retífica Central  ",
-      ramo: "retifica_leve",
-      admin: { nome: "Maria", email: "  Maria@Central.com " },
-    });
+  it("cria tenant + admin (dono) + estações, ligando o admin à identidade e normalizando o e-mail", async () => {
+    const res = await criarOficina(
+      { db: database.db, auth },
+      inputBase({ nomeOficina: "  Retífica Central  ", admin: { nome: "Maria", email: "  Maria@Central.com ", senha: "senha-forte-1" } }),
+    );
 
-    expect(res.tenantId).toBeTruthy();
     expect(res.estacoesCriadas).toBeGreaterThan(0);
+    expect(res.authUserId).toBe(auth.criadas[0]);
 
     const [oficina] = await database.db.select().from(tenant).where(eq(tenant.id, res.tenantId));
     expect(oficina?.nome).toBe("Retífica Central");
     expect(oficina?.templateRamo).toBe("retifica_leve");
 
-    const admins = await database.db
-      .select()
-      .from(usuario)
-      .where(eq(usuario.tenantId, res.tenantId));
+    const admins = await database.db.select().from(usuario).where(eq(usuario.tenantId, res.tenantId));
     expect(admins).toHaveLength(1);
     expect(admins[0]?.papel).toBe("dono");
     expect(admins[0]?.email).toBe("maria@central.com");
+    expect(admins[0]?.authUserId).toBe(res.authUserId);
 
-    const estacoes = await database.db
-      .select()
-      .from(estacao)
-      .where(eq(estacao.tenantId, res.tenantId));
+    const estacoes = await database.db.select().from(estacao).where(eq(estacao.tenantId, res.tenantId));
     expect(estacoes).toHaveLength(res.estacoesCriadas);
   });
 
-  it("rejeita e-mail duplicado com erro de domínio e não cria a segunda oficina", async () => {
-    const input: CriarOficinaInput = {
-      nomeOficina: "Oficina A",
-      ramo: "retifica_leve",
-      admin: { nome: "Dono", email: "dup@x.com" },
-    };
-    await criarOficina(database.db, input);
+  it("rejeita e-mail duplicado (no provedor) com erro de domínio e não cria a segunda oficina", async () => {
+    await criarOficina({ db: database.db, auth }, inputBase({ admin: { nome: "Dono", email: "dup@x.com", senha: "senha-forte-1" } }));
 
     await expect(
-      criarOficina(database.db, { ...input, nomeOficina: "Oficina B" }),
+      criarOficina({ db: database.db, auth }, inputBase({ nomeOficina: "Oficina B", admin: { nome: "Dono", email: "dup@x.com", senha: "senha-forte-1" } })),
     ).rejects.toBeInstanceOf(EmailJaCadastradoError);
 
     const tenants = await database.db.select().from(tenant);
     expect(tenants).toHaveLength(1);
-    expect(tenants[0]?.nome).toBe("Oficina A");
   });
 
-  it("rejeita dados obrigatórios vazios", async () => {
+  it("compensa (remove a identidade órfã) se a persistência falhar", async () => {
+    // Pré-insere um usuário com o e-mail direto no banco — a identidade no fake NÃO conhece esse
+    // e-mail, então a criação da identidade passa, mas o INSERT no banco viola o unique → compensação.
+    const [t] = await database.db
+      .insert(tenant)
+      .values({ nome: "Pré", templateRamo: "retifica_leve" })
+      .returning({ id: tenant.id });
+    await database.db
+      .insert(usuario)
+      .values({ tenantId: t!.id, nome: "Pré", email: "colide@x.com", papel: "dono" });
+
     await expect(
-      criarOficina(database.db, {
-        nomeOficina: "   ",
-        ramo: "retifica_leve",
-        admin: { nome: "X", email: "x@x.com" },
-      }),
+      criarOficina({ db: database.db, auth }, inputBase({ admin: { nome: "A", email: "colide@x.com", senha: "senha-forte-1" } })),
+    ).rejects.toBeInstanceOf(EmailJaCadastradoError);
+
+    expect(auth.criadas).toHaveLength(1);
+    expect(auth.removidas).toEqual(auth.criadas); // a identidade criada foi removida
+  });
+
+  it("rejeita dados inválidos sem criar identidade (nome, e-mail e senha)", async () => {
+    await expect(
+      criarOficina({ db: database.db, auth }, inputBase({ nomeOficina: "   " })),
     ).rejects.toBeInstanceOf(DadosInvalidosError);
 
     await expect(
-      criarOficina(database.db, {
-        nomeOficina: "Ok",
-        ramo: "retifica_leve",
-        admin: { nome: "X", email: "sem-arroba" },
-      }),
+      criarOficina({ db: database.db, auth }, inputBase({ admin: { nome: "X", email: "sem-arroba", senha: "senha-forte-1" } })),
     ).rejects.toBeInstanceOf(DadosInvalidosError);
+
+    await expect(
+      criarOficina({ db: database.db, auth }, inputBase({ admin: { nome: "X", email: "ok@x.com", senha: "curta" } })),
+    ).rejects.toBeInstanceOf(DadosInvalidosError);
+
+    expect(auth.criadas).toHaveLength(0); // validação antes de tocar no provedor
   });
 });

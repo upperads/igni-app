@@ -1,37 +1,47 @@
+import type { AuthIdentityPort } from "@/application/ports/auth-identity";
+import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
+import { estacoesDoRamo, type Ramo } from "@/domain/templates/ramo";
 import type { AppDatabase } from "@/infra/db/connection";
 import { isUniqueViolation } from "@/infra/db/errors";
 import { estacao, tenant, usuario } from "@/infra/db/schema";
-import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
-import { estacoesDoRamo, type Ramo } from "@/domain/templates/ramo";
+
+/** Tamanho mínimo de senha aceito pelo onboarding (alinhado ao Supabase Auth local). */
+export const SENHA_MIN_LENGTH = 8;
 
 export interface CriarOficinaInput {
   nomeOficina: string;
   ramo: Ramo;
-  admin: { nome: string; email: string };
+  admin: { nome: string; email: string; senha: string };
+}
+
+export interface CriarOficinaDeps {
+  db: AppDatabase;
+  auth: AuthIdentityPort;
 }
 
 export interface CriarOficinaResult {
   tenantId: string;
   adminId: string;
+  authUserId: string;
   estacoesCriadas: number;
 }
 
 /**
- * US-01 — onboarding da oficina. Cria o tenant, o usuário admin (papel `dono`) e pré-carrega
- * as estações do template do ramo, tudo numa transação atômica.
+ * US-01 — onboarding da oficina. Cria a identidade no provedor de auth (ADR-006), depois o tenant,
+ * o usuário admin (papel `dono`, ligado à identidade) e as estações do template — tudo atômico no
+ * banco. Se a persistência falhar, **compensa** removendo a identidade órfã (saga).
  *
- * Roda na conexão PRIVILEGIADA (`db`) de propósito: ainda não existe um tenant corrente, então
- * a RLS não se aplica (ADR-005). A partir daí, todo acesso normal passa por `withTenant`.
- *
- * `db` é injetado para testabilidade (a suíte passa o banco de testes).
+ * Roda na conexão PRIVILEGIADA (`db`): ainda não há tenant corrente, então a RLS não se aplica
+ * (a partir daí o acesso normal passa por `withTenant`). `db` e `auth` são injetados (testáveis).
  */
 export async function criarOficina(
-  db: AppDatabase,
+  deps: CriarOficinaDeps,
   input: CriarOficinaInput,
 ): Promise<CriarOficinaResult> {
   const nomeOficina = input.nomeOficina.trim();
   const adminNome = input.admin.nome.trim();
   const email = input.admin.email.trim().toLowerCase();
+  const senha = input.admin.senha;
 
   if (!nomeOficina) {
     throw new DadosInvalidosError("Nome da oficina é obrigatório.");
@@ -42,11 +52,18 @@ export async function criarOficina(
   if (!email.includes("@")) {
     throw new DadosInvalidosError("E-mail do administrador inválido.");
   }
+  if (senha.length < SENHA_MIN_LENGTH) {
+    throw new DadosInvalidosError(`Senha deve ter ao menos ${SENHA_MIN_LENGTH} caracteres.`);
+  }
 
   const estacoes = estacoesDoRamo(input.ramo);
 
+  // 1) Cria a identidade (lança EmailJaCadastradoError se o e-mail já existe no provedor).
+  const authUserId = await deps.auth.criarIdentidade({ email, senha });
+
+  // 2) Persiste o tenant + admin + estações. Se falhar, compensa a identidade (passo 3).
   try {
-    return await db.transaction(async (tx) => {
+    return await deps.db.transaction(async (tx) => {
       const [oficina] = await tx
         .insert(tenant)
         .values({ nome: nomeOficina, templateRamo: input.ramo })
@@ -54,7 +71,7 @@ export async function criarOficina(
 
       const [admin] = await tx
         .insert(usuario)
-        .values({ tenantId: oficina!.id, nome: adminNome, email, papel: "dono" })
+        .values({ tenantId: oficina!.id, authUserId, nome: adminNome, email, papel: "dono" })
         .returning({ id: usuario.id });
 
       if (estacoes.length > 0) {
@@ -66,10 +83,13 @@ export async function criarOficina(
       return {
         tenantId: oficina!.id,
         adminId: admin!.id,
+        authUserId,
         estacoesCriadas: estacoes.length,
       };
     });
   } catch (err) {
+    // 3) Compensação best-effort: não deixa identidade órfã se a persistência falhou.
+    await deps.auth.removerIdentidade(authUserId).catch(() => undefined);
     if (isUniqueViolation(err, "usuario_email_unico")) {
       throw new EmailJaCadastradoError(email);
     }
