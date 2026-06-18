@@ -1,10 +1,16 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução (devdead-exec) em andamento.** Inception completa. Waves 1, 2 (US-01) e **3a (fundação de auth) CONCLUÍDAS**.
-- **Aprovado até**: Fases 1–3; stack do M1 (ADR-004/005); arquitetura de auth (ADR-006); Checkpoints 1 e 2 aprovados.
-- **Próximo passo**: **Checkpoint 3a aguardando aprovação.** Depois: **Wave 3b — US-02** (login + 2FA admin AAL2 + lockout por contador + recuperação).
-- **Supabase local**: stack no ar, portas remapeadas p/ **544xx** (config.toml) — API `54421`, DB `54422`. Chaves locais no `.env` (gitignored). MFA TOTP habilitado; senha mínima 8.
+- **Fase atual**: **Execução em andamento.** Inception completa. Backend da Wave 3 (US-01/02/03) e **fundação visual + onboarding (3d) CONCLUÍDOS**. Infra de deploy parcialmente provisionada (ADR-007).
+- **Aprovado até**: Fases 1–3; ADR-004/005/006/007; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados.
+- **Próximo passo**: (1) destravar o **Supabase cloud** (decisão de billing — ver Ops); (2) retomar a **Wave 3d**: tela de login (sessão `@supabase/ssr` + lockout) → 2FA → US-17.
+- **Ops / Infra (ADR-007)**:
+  - **Railway**: projeto `igni-app` criado e linkado (workspace pessoal, env `production`, sem serviço ainda). Deploy depois.
+  - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). Push do `main` feito (`upperads/igni-app`).
+  - **Supabase cloud**: ⛔ **BLOQUEADO** — limite de 2 projetos free ATIVOS por conta. Apagar um projeto inativo não liberou. Para criar o `igni`: **pausar um ativo** (orbit-staging ou adm-levellog-prod) **ou upgrade de org p/ Pro**. Decisão de billing do dono.
+  - **MCP Supabase**: OAuth iniciado; aguardando o usuário completar (ou colar a URL de callback).
+  - Pendente após destravar: criar `igni` cloud + `db:migrate` (tratar `app_user`), secrets no Railway, conectar GitHub→Railway, branch protection.
+- **Supabase local**: stack no ar, portas **544xx** (API `54421`, DB `54422`). Chaves locais no `.env`. MFA TOTP habilitado; senha mínima 8.
 - **Execução — ondas**:
   - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Commits `a168a66`, `6b7497e`, `a4f8dcb`.
   - Wave 2 (US-01) ✅ — schema `tenant`/`usuario`/`estacao` + migrations (tabelas + RLS); enforcement RLS via `withTenant` (`SET LOCAL ROLE app_user` + `set_config app.current_tenant`); caso de uso `criarOficina` (tenant + admin `dono` + seed de estações do template) com email duplicado tratado. TDD RED→GREEN no isolamento. **12 testes** verdes; typecheck/lint/build verdes. Review independente (subagent): PASS nas 3 etapas, sem furo de confidencialidade. Achado ALTA (validação de UUID no `withTenant`) corrigido.
@@ -25,7 +31,7 @@
   - Uptime alvo — a definir
   - Validar contraste da paleta de sinal sobre grafite (WCAG) na implementação
   - Fornecedores: **resolvido** — Supabase (Postgres+RLS+Auth+Realtime, ADR-004) + Drizzle (ADR-005). **WhatsApp** ainda em aberto → decide no M7.
-- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), **004 (plataforma Supabase)**, **005 (Drizzle + enforcement RLS)** — em `/docs/adr/`
+- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), **007 (deploy Railway + CI + Supabase cloud)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
 - **Última atualização**: 16/06

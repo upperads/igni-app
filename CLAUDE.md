@@ -51,6 +51,14 @@ toque grande para "bump" com luva. WCAG 2.2 AA.
 Conventional commits por módulo da EAP: `feat(os): ...`, `feat(painel): ...`, `feat(auth): ...`,
 `feat(triagem): ...`, `feat(orcamento): ...`, `feat(portal): ...`, `feat(templates): ...`.
 
+## Operações / Deploy (ADR-007)
+- **Host do app**: Railway (projeto `igni-app`). **Dados**: Supabase cloud (projeto `igni`, sa-east-1).
+- **Migrations**: SEMPRE via Drizzle (`pnpm db:migrate`) contra o `DATABASE_URL` do ambiente. **Nunca** SQL manual em produção; nunca o migration do Supabase em paralelo.
+- **CI** (GitHub Actions, `.github/workflows/ci.yml`): build → lint → typecheck → testes → checagem de migrations. **Sem merge no `main` com pipeline vermelho.**
+- **Deploy**: só a partir do `main`, após CI verde. **Rollback**: redeploy do build anterior no Railway; migrations são *forward-fix* (corrige para frente), sem down automática.
+- **Segredos**: nos secrets do Railway/Supabase, **nunca no repo** (o `.env` é local e gitignored).
+- **Nunca**: rodar SQL manual em prod · commitar segredos · pular/editar migration já aplicada · subir sem CI verde.
+
 ## Mapa de documentos
 - `/docs/00_status.md` — estado atual (ler primeiro ao retomar)
 - `/docs/01_conception.md` — Business Case + Canvas
@@ -58,4 +66,4 @@ Conventional commits por módulo da EAP: `feat(os): ...`, `feat(painel): ...`, `
 - `/docs/03_architecture.md` — Stack + ERD + API + EAP
 - `/docs/03b_design.md` — Design system + spec por tela
 - `/docs/04_execution.md` — Backlog + critérios de aceite + handoff
-- `/docs/adr/` — registros de decisão (001 RLS, 002 realtime, 003 full-stack)
+- `/docs/adr/` — registros de decisão (001 RLS, 002 realtime, 003 full-stack, 004 Supabase, 005 Drizzle/RLS, 006 auth, 007 deploy/CI)
