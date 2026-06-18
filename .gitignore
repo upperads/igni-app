@@ -31,7 +31,7 @@ Thumbs.db
 
 # Playwright (screenshots/logs de verificação visual)
 .playwright-mcp/
-/igni-painel-*.png
+/igni-*.png
 
 # TypeScript
 *.tsbuildinfo
