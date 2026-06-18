@@ -11,7 +11,7 @@
   - Wave 3a (fundação de auth) ✅ — Supabase local no ar (Postgres único, ADR-006); delta `auth_user_id` em `usuario` (migration 0002, link lógico sem FK rígida p/ rodar no PG de testes); `@supabase/ssr` + `supabase-js`; `AuthIdentityPort` (porta hexagonal) + adaptador Supabase Admin + fake; `criarOficina` agora cria a identidade com **compensação (saga)** + valida senha. **13 testes** verdes (fake no PG leve); migrations aplicadas no Supabase; tabelas+RLS+`app_user` convivendo com `auth.users` (verificado).
   - Wave 3b (US-02 login/2FA/lockout) — próxima.
   - Wave 3c (US-03 RBAC) — pendente.
-  - Wave 3d (UI onboarding/login/2FA, Next 16) — pendente.
+  - Wave 3d (UI: onboarding/login/2FA + **US-17 "Primeiros passos"** — card na Home + rota `/primeiros-passos`, copy anti-IA, visual impecável; conteúdo em `docs/conteudo/primeiros-passos.md`), Next 16 — pendente.
 - **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
   - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
   - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.

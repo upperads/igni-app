@@ -124,6 +124,20 @@
 
 ---
 
+## Épico M9 — Onboarding do usuário (Primeiros passos) — *adição pós-inception (17/06)*
+
+### US-17: Como dono recém-chegado, quero um guia de "Primeiros passos", para saber por onde começar sem me perder.
+- [ ] **Card na Home** (painel inicial) que convida e leva ao guia "Primeiros passos".
+- [ ] **Rota fixa `/primeiros-passos`**, sempre acessível pelo menu (não some depois do primeiro uso).
+- [ ] Conteúdo **didático**, explicando o app com calma e na ordem que faz sentido para quem começa (fonte: `docs/conteudo/primeiros-passos.md`).
+- [ ] **Copy anti-IA**: prosa fluida, sem frases curtas picotadas nem travessão em tudo (regra de escrita do projeto).
+- [ ] **Visual impecável e anti-IA** (não-genérico), no tema do app; responsivo desktop/mobile; **WCAG 2.2 AA**.
+- [ ] [teste] a rota renderiza o conteúdo; o card da Home aponta para ela; estrutura acessível (headings/landmarks).
+
+> Aprovado para construir na **Wave 3d** (UI), usando a skill de design para o visual. Não bloqueia a US-02.
+
+---
+
 ## Handoff para execução
 
 ### Mapa: artefatos → Spec Kit
