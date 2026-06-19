@@ -1,0 +1,11 @@
+<h2>Redefinir a sua senha</h2>
+<p>
+  Recebemos um pedido para redefinir a senha da sua conta no Igni. Se foi você, clique no link
+  abaixo para escolher uma nova senha. Se não foi você, pode ignorar este e-mail com tranquilidade,
+  que nada muda.
+</p>
+<p>
+  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/atualizar-senha">
+    Redefinir a senha
+  </a>
+</p>

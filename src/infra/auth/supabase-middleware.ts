@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const ROTAS_PUBLICAS = ["/login", "/criar-conta"];
 
+// Fluxo de recuperação de senha: sempre passa (não redireciona por auth nem por 2FA), porque a
+// sessão de recuperação é AAL1 e precisa chegar até a tela de nova senha.
+const ROTAS_LIVRES = ["/recuperar", "/atualizar-senha", "/auth"];
+
 function ehPublica(path: string): boolean {
   return ROTAS_PUBLICAS.some((r) => path === r || path.startsWith(`${r}/`));
 }
@@ -57,6 +61,11 @@ export async function atualizarSessaoEProteger(request: NextRequest): Promise<Ne
   } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
   const eh2fa = path === "/login/2fa";
+
+  // Rotas do fluxo de recuperação passam sem qualquer redirecionamento.
+  if (ROTAS_LIVRES.some((r) => path === r || path.startsWith(`${r}/`))) {
+    return response;
+  }
 
   if (!user) {
     if (ehPublica(path) || eh2fa) {

@@ -35,6 +35,12 @@ export function FormLogin() {
         {pendente ? "Entrando…" : "Entrar"}
       </Button>
 
+      <p className="text-center font-body text-sm">
+        <Link href="/recuperar" className="text-aco-400 hover:text-ambar-500 hover:underline">
+          Esqueci a senha
+        </Link>
+      </p>
+
       <p className="text-center font-body text-sm text-aco-400">
         Não tem conta?{" "}
         <Link href="/criar-conta" className="text-ambar-500 hover:underline">

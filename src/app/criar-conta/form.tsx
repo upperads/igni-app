@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { forcaSenha, type ForcaSenha } from "@/domain/auth/forca-senha";
+import { forcaSenha } from "@/domain/auth/forca-senha";
 import { Button } from "@/ui/components/button";
-import { cn } from "@/ui/cn";
+import { MedidorForca } from "@/ui/components/medidor-forca";
 import { INPUT_CLASS, LABEL_CLASS, TextField } from "@/ui/components/text-field";
 import { acaoCriarConta, type EstadoCriarConta } from "./actions";
 
@@ -15,21 +15,6 @@ const RAMOS_UI = [
 ] as const;
 
 const ESTADO_INICIAL: EstadoCriarConta = {};
-
-function MedidorForca({ forca }: { forca: ForcaSenha }) {
-  const cor =
-    forca.nivel <= 1 ? "bg-sinal-vermelho" : forca.nivel === 2 ? "bg-sinal-amarelo" : "bg-sinal-verde";
-  return (
-    <div className="mt-1 flex items-center gap-2">
-      <div className="flex flex-1 gap-1" aria-hidden>
-        {[0, 1, 2, 3].map((i) => (
-          <span key={i} className={cn("h-1 flex-1 rounded", i < forca.nivel ? cor : "bg-grafite-700")} />
-        ))}
-      </div>
-      <span className="font-mono text-[11px] text-aco-400">{forca.rotulo}</span>
-    </div>
-  );
-}
 
 export function FormCriarConta() {
   const [estado, acao, pendente] = useActionState(acaoCriarConta, ESTADO_INICIAL);
