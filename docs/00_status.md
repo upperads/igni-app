@@ -5,11 +5,11 @@
 - **Aprovado até**: Fases 1–3; ADR-004/005/006/007; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados.
 - **Próximo passo**: (1) destravar o **Supabase cloud** (decisão de billing — ver Ops); (2) retomar a **Wave 3d**: tela de login (sessão `@supabase/ssr` + lockout) → 2FA → US-17.
 - **Ops / Infra (ADR-007)**:
-  - **Railway**: projeto `igni-app` criado e linkado (workspace pessoal, env `production`, sem serviço ainda). Deploy depois.
-  - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). Push do `main` feito (`upperads/igni-app`).
+  - **🚀 App em produção**: **https://igni-app-production.up.railway.app** — 1º deploy via Railway CLI (`railway up`) **concluído e no ar** (19/06). Smoke test (curl): `/login` → 200; `/` → 307 p/ `/login` (middleware protege em prod). Secrets do cloud setados no serviço. Build pinado a `pnpm@10.33.0` + Node ≥20 (a versão de pnpm do Railpack exigia `packages` no workspace; o pin resolveu).
+  - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). `main` em `upperads/igni-app`.
   - **Supabase cloud**: ✅ projeto `igni` criado (ref `gtfgtkwmsnnzajbgrlvw`, org relatorio_revolute, sa-east-1), após o dono pausar o orbit-staging. **Migrations aplicadas** (via session pooler aws-1). **Verificado**: tabelas com `rls=true, force=false`; insert privilegiado OK; `app_user` barrado por RLS (0 linhas de outro tenant). Conexão = session pooler aws-1, porta 5432, `?sslmode=require`. Credenciais (gitignored) no `.env` local, bloco comentado "CLOUD".
   - **MCP Supabase**: OAuth ainda não concluído (não-bloqueante; usei a CLI).
-  - Pendente (no deploy, exige serviço Railway): secrets no Railway (DATABASE_URL cloud + chaves), conectar GitHub→Railway (auto-deploy), branch protection, 1º deploy.
+  - **Follow-ups de prod** (não bloqueiam o core, que funciona em prod): (a) **`site_url`/redirect do cloud** → domínio do Railway (o `config push` falhou no free tier por causa do template de e-mail); (b) **SMTP próprio** para os e-mails de recuperação em prod (free tier não permite template custom → a recuperação por e-mail só funciona local hoje); (c) **branch protection** no GitHub exigindo o CI; (d) `railway up` é deploy manual (sem auto-deploy do GitHub) — decisão do dono (deploy via CLI).
 - **Supabase local**: stack no ar, portas **544xx** (API `54421`, DB `54422`). Chaves locais no `.env`. MFA TOTP habilitado; senha mínima 8.
 - **Execução — ondas**:
   - Wave 1 (fundação) ✅ — Next.js 16 + TS strict + Tailwind + ESLint; camadas domain/application/infra/app; Drizzle + Postgres local (docker-compose, porta 5433) + `igni_test`; Vitest. Commits `a168a66`, `6b7497e`, `a4f8dcb`.

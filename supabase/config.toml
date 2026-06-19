@@ -251,6 +251,7 @@ otp_expiry = 3600
 # content_path = "./supabase/templates/invite.html"
 
 # Template de recuperação de senha (linka para a rota /auth/confirm com o token_hash).
+# NOTA: template custom só vale localmente; no cloud free tier exige SMTP próprio (ver 00_status).
 [auth.email.template.recovery]
 subject = "Redefinir a sua senha no Igni"
 content_path = "./supabase/templates/recovery.html"

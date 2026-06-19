@@ -52,12 +52,14 @@ Conventional commits por módulo da EAP: `feat(os): ...`, `feat(painel): ...`, `
 `feat(triagem): ...`, `feat(orcamento): ...`, `feat(portal): ...`, `feat(templates): ...`.
 
 ## Operações / Deploy (ADR-007)
-- **Host do app**: Railway (projeto `igni-app`). **Dados**: Supabase cloud (projeto `igni`, sa-east-1).
-- **Migrations**: SEMPRE via Drizzle (`pnpm db:migrate`) contra o `DATABASE_URL` do ambiente. **Nunca** SQL manual em produção; nunca o migration do Supabase em paralelo.
+- **App em produção**: **https://igni-app-production.up.railway.app** (Railway, projeto `igni-app`, serviço `igni-app`). **Dados**: Supabase cloud (projeto `igni`, ref `gtfgtkwmsnnzajbgrlvw`, sa-east-1).
+- **Deploy** (preferência do dono): **CLI do Railway**, do código local — `railway up --service igni-app --ci`. Build pinado: `pnpm@10.33.0` (`packageManager`) + Node ≥20 (`engines`). Sempre **commit/push no GitHub** junto. Sem auto-deploy do GitHub conectado.
+- **Migrations**: SEMPRE via Drizzle (`pnpm db:migrate`) contra o `DATABASE_URL` do ambiente (cloud = session pooler aws-1, `?sslmode=require`). **Nunca** SQL manual em produção; nunca o migration do Supabase em paralelo.
 - **CI** (GitHub Actions, `.github/workflows/ci.yml`): build → lint → typecheck → testes → checagem de migrations. **Sem merge no `main` com pipeline vermelho.**
-- **Deploy**: só a partir do `main`, após CI verde. **Rollback**: redeploy do build anterior no Railway; migrations são *forward-fix* (corrige para frente), sem down automática.
+- **Rollback**: redeploy do build anterior no Railway; migrations são *forward-fix* (corrige para frente), sem down automática.
 - **Segredos**: nos secrets do Railway/Supabase, **nunca no repo** (o `.env` é local e gitignored).
-- **Nunca**: rodar SQL manual em prod · commitar segredos · pular/editar migration já aplicada · subir sem CI verde.
+- **Verificação**: testes/typecheck/lint/build + checagens HTTP (curl). **Sem Playwright.**
+- **Nunca**: rodar SQL manual em prod · commitar segredos · pular/editar migration já aplicada · subir sem CI verde · usar Playwright.
 
 ## Mapa de documentos
 - `/docs/00_status.md` — estado atual (ler primeiro ao retomar)
