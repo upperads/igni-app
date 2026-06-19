@@ -48,3 +48,11 @@ export class AutorizacaoNegadaError extends Error {
     this.name = "AutorizacaoNegadaError";
   }
 }
+
+/** OS não encontrada no tenant corrente (M2). */
+export class OsNaoEncontradaError extends Error {
+  constructor(public readonly osId: string) {
+    super("Ordem de serviço não encontrada.");
+    this.name = "OsNaoEncontradaError";
+  }
+}
