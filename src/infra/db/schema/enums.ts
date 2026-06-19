@@ -14,3 +14,26 @@ export const templateRamo = pgEnum("template_ramo", [
   "retifica_leve",
   "centro_automotivo",
 ]);
+
+/** Estados da OS (M2 / ADR-008). Espelha `ESTADOS_OS` do domínio (teste de drift garante). */
+export const estadoOs = pgEnum("estado_os", [
+  "aberta",
+  "diagnostico",
+  "orcamento",
+  "aguardando_aprovacao",
+  "aguardando_peca",
+  "execucao",
+  "controle_qualidade",
+  "pronta",
+  "entregue",
+]);
+
+/** Modalidade de entrada (A/B/C do PRD): só usinagem · empresa retira · cliente entrega desmontado. */
+export const modalidadeEntrada = pgEnum("modalidade_entrada", [
+  "so_usinagem",
+  "empresa_retira",
+  "ja_desmontado",
+]);
+
+/** Tipo de cliente (P4 do PRD). */
+export const tipoCliente = pgEnum("tipo_cliente", ["frota", "produtor", "avulso"]);

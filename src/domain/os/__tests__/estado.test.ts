@@ -7,6 +7,7 @@ import {
   quatroPerguntas,
   validarTransicao,
 } from "@/domain/os/estado";
+import { estadoOs } from "@/infra/db/schema";
 
 const APROVADO: ContextoTransicao = { orcamentoAprovado: true, cqAprovado: true };
 const NADA: ContextoTransicao = { orcamentoAprovado: false, cqAprovado: false };
@@ -63,5 +64,9 @@ describe("máquina de estados da OS (US-05)", () => {
         expect(campo.trim().length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("o enum estado_os do banco espelha ESTADOS_OS (sem drift)", () => {
+    expect([...estadoOs.enumValues].sort()).toEqual([...ESTADOS_OS].sort());
   });
 });

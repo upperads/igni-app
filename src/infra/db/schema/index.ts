@@ -7,3 +7,8 @@ export * from "./tenant";
 export * from "./usuario";
 export * from "./estacao";
 export * from "./tentativa-login";
+export * from "./cliente";
+export * from "./equipamento";
+export * from "./entrada";
+export * from "./os";
+export * from "./evento";

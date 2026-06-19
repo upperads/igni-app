@@ -43,6 +43,20 @@
       "when": 1781818589998,
       "tag": "0005_rls_cloud_compat",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781891491830,
+      "tag": "0006_worthless_devos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781891497167,
+      "tag": "0007_rls_os_m2",
+      "breakpoints": true
     }
   ]
 }

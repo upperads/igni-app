@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { Database } from "@/infra/db/connection";
-import { tenant, usuario } from "@/infra/db/schema";
+import { cliente, tenant, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
 /**
@@ -103,5 +103,14 @@ describe("isolamento multi-tenant (RLS)", () => {
       .from(usuario)
       .where(eq(usuario.email, "intruso@x.com"));
     expect(intrusos).toHaveLength(0);
+  });
+
+  it("isola também as tabelas do M2 (ex.: cliente)", async () => {
+    await database.db.insert(cliente).values({ tenantId: tenantA, nome: "Cliente A", tipo: "avulso" });
+    await database.db.insert(cliente).values({ tenantId: tenantB, nome: "Cliente B", tipo: "frota" });
+
+    const rows = await database.withTenant(tenantA, (tx) => tx.select().from(cliente));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.nome).toBe("Cliente A");
   });
 });
