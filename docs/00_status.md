@@ -1,9 +1,9 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução em andamento.** Inception completa. Backend da Wave 3 (US-01/02/03) e **fundação visual + onboarding (3d) CONCLUÍDOS**. Infra de deploy parcialmente provisionada (ADR-007).
-- **Aprovado até**: Fases 1–3; ADR-004/005/006/007; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados.
-- **Próximo passo**: (1) destravar o **Supabase cloud** (decisão de billing — ver Ops); (2) retomar a **Wave 3d**: tela de login (sessão `@supabase/ssr` + lockout) → 2FA → US-17.
+- **Fase atual**: **Execução em andamento.** Inception completa. Auth completa (Wave 3, US-01/02/03 + UI 3d). **M2 (OS) CONCLUÍDO**: máquina de estados (ADR-008), schema OS + casos de uso, e **UI da OS** (lista + detalhe com as 4 perguntas + linha do tempo + ações de transição + abrir OS). App no ar no Railway (ADR-007).
+- **Aprovado até**: Fases 1–3; ADR-004/005/006/007/008; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados; M2 aprovado.
+- **Próximo passo**: M3 — prioridade/triagem (razão crítica, travamento, regra da vez) e o painel em tempo real (Realtime). Gates de orçamento/CQ ganham contexto real no M5.
 - **Ops / Infra (ADR-007)**:
   - **🚀 App em produção**: **https://igni-app-production.up.railway.app** — 1º deploy via Railway CLI (`railway up`) **concluído e no ar** (19/06). Smoke test (curl): `/login` → 200; `/` → 307 p/ `/login` (middleware protege em prod). Secrets do cloud setados no serviço. Build pinado a `pnpm@10.33.0` + Node ≥20 (a versão de pnpm do Railpack exigia `packages` no workspace; o pin resolveu).
   - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). `main` em `upperads/igni-app`.
@@ -25,6 +25,11 @@
     - ✅ *US-17 "Primeiros passos"*: rota `/primeiros-passos` (guia didático, 6 passos numerados + espinha, copy anti-IA), card na Home e item no menu desktop. Conteúdo como dados (espelha `docs/conteudo/primeiros-passos.md`) com teste de integridade. Verificado por screenshot. Commit `b4299da`.
     - ✅ *Recuperação de senha* (`/recuperar` → e-mail → `/auth/confirm` → `/atualizar-senha`): template de e-mail custom (token_hash), `verifyOtp` server-side, nova senha com medidor de força; rotas livres no middleware; link no login. **Verificado end-to-end** (conta sem MFA, via Mailpit). Commit `00f5659`.
     - *Follow-ups:* (a) **recuperação p/ conta com 2FA** exige step-up AAL2 (TOTP) antes de trocar a senha — Supabase retorna 401 sem isso; (b) no deploy, setar o `site_url`/redirect URLs do projeto cloud para a URL do Railway (hoje `config.toml` aponta local `3210`); (c) **read-only por papel na UI** (`pode()`) — fica para quando existirem telas de edição (M5+). — card na Home + rota `/primeiros-passos`, copy anti-IA, visual impecável; conteúdo em `docs/conteudo/primeiros-passos.md`), Next 16 — pendente.
+  - **M2 (OS — núcleo do produto)** ✅ — **ADR-008** (máquina de estados).
+    - ✅ *Domínio* (`src/domain/os/estado.ts`): 9 estados, transições permitidas (com fluxos de exceção do PRD), **3 gates** inegociáveis (RN-01: não usina sem orçamento; não passa do CQ sem aprovação), **4 perguntas** (RN-04) derivadas do estado, rótulos pt-BR. Lógica pura (sem DB/framework). Teste de drift garante que o enum do banco espelha o domínio.
+    - ✅ *Schema + RLS*: `cliente`/`equipamento`/`entrada`/`os`/`evento`, todos com `tenant_id` + política RLS de isolamento (migrations **0006** tabelas, **0007** RLS: `GRANT app_user` + ENABLE sem FORCE + policies). Enums `estado_os`, `modalidade_entrada`, `tipo_cliente`.
+    - ✅ *Casos de uso* (escopados por `withTenant` → RLS ativa, **1ª escrita pelo caminho do tenant**): `abrirOS` (US-04 — cria cliente+equipamento+entrada+OS `aberta` + EVENTO de abertura) e `executarTransicao` (US-05 — valida estrutura+gates, muda estado, grava EVENTO). Erros de domínio dedicados. **50 testes** verdes (gate barrando/liberando, transição inválida, OS inexistente).
+    - ✅ *UI da OS*: `/os` (lista + estado vazio), `/os/nova` (abrir OS — form client + server action + redirect ao detalhe), `/os/[id]` (as 4 perguntas em cartões, **linha do tempo** dos eventos, **ações de transição** com `useTransition` + `router.refresh`). Helper `sessaoAtual()` (Supabase user → perfil tenant/papel) e composição `infra/composition/os.ts` (queries via `withTenant` + wrappers dos casos de uso). Badge de estado (cor+rótulo, nunca só cor). Contexto dos gates ainda vazio (M5 liga orçamento/CQ) → execução/pronta barram com o motivo do gate — a regra de ouro em ação. typecheck/lint/build/test verdes.
 - **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
   - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
   - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.
@@ -35,7 +40,7 @@
   - Uptime alvo — a definir
   - Validar contraste da paleta de sinal sobre grafite (WCAG) na implementação
   - Fornecedores: **resolvido** — Supabase (Postgres+RLS+Auth+Realtime, ADR-004) + Drizzle (ADR-005). **WhatsApp** ainda em aberto → decide no M7.
-- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), **007 (deploy Railway + CI + Supabase cloud)** — em `/docs/adr/`
+- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), **008 (máquina de estados da OS)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
-- **Última atualização**: 16/06
+- **Última atualização**: 19/06

@@ -19,6 +19,23 @@ export const ESTADOS_OS = [
 
 export type EstadoOS = (typeof ESTADOS_OS)[number];
 
+/** Rótulos legíveis dos estados (pt-BR), para a UI. */
+export const ROTULOS_ESTADO: Record<EstadoOS, string> = {
+  aberta: "Aberta",
+  diagnostico: "Diagnóstico",
+  orcamento: "Orçamento",
+  aguardando_aprovacao: "Aguardando aprovação",
+  aguardando_peca: "Aguardando peça",
+  execucao: "Execução",
+  controle_qualidade: "Controle de qualidade",
+  pronta: "Pronta",
+  entregue: "Entregue",
+};
+
+export function rotuloEstado(estado: EstadoOS): string {
+  return ROTULOS_ESTADO[estado];
+}
+
 /** Insumos dos gates, resolvidos pela aplicação (status do orçamento, resultado do CQ). */
 export interface ContextoTransicao {
   orcamentoAprovado: boolean;
