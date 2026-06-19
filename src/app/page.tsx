@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AppShell } from "@/ui/components/app-shell";
 import { Button } from "@/ui/components/button";
 import { KpiStat } from "@/ui/components/kpi-stat";
@@ -25,6 +26,21 @@ const LEGENDA: Sinal[] = ["critico", "atraso", "atencao", "emdia", "aguardando"]
 export default function Home() {
   return (
     <AppShell alarme setor="Setor: Cabeçote">
+      <Link
+        href="/primeiros-passos"
+        className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-ambar-600/40 bg-grafite-800 px-5 py-4 transition-colors hover:border-ambar-600/70"
+      >
+        <div>
+          <p className="font-display text-lg text-aco-100">Primeiros passos</p>
+          <p className="mt-0.5 font-body text-sm text-aco-400">
+            Novo por aqui? Veja como começar a usar o Igni, com calma.
+          </p>
+        </div>
+        <span className="shrink-0 font-mono text-sm text-ambar-500" aria-hidden>
+          Abrir →
+        </span>
+      </Link>
+
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight text-aco-100">Painel geral</h1>

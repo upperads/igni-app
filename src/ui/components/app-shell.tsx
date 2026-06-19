@@ -9,7 +9,11 @@ const NAV = [
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/os", rotulo: "OS" },
   { href: "/cadastros", rotulo: "Cadastros" },
+  { href: "/primeiros-passos", rotulo: "Primeiros passos" },
 ] as const;
+
+// Na barra inferior (mobile) ficam só as 4 ações de chão; o guia chega pelo card na Home.
+const NAV_MOBILE = NAV.slice(0, 4);
 
 interface Props {
   children: ReactNode;
@@ -77,7 +81,7 @@ export function AppShell({ children, alarme = false, setor }: Props) {
         )}
         aria-label="Navegação principal (mobile)"
       >
-        {NAV.map((n) => (
+        {NAV_MOBILE.map((n) => (
           <Link
             key={n.href}
             href={n.href}
