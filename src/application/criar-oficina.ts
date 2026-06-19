@@ -58,8 +58,14 @@ export async function criarOficina(
 
   const estacoes = estacoesDoRamo(input.ramo);
 
-  // 1) Cria a identidade (lança EmailJaCadastradoError se o e-mail já existe no provedor).
-  const authUserId = await deps.auth.criarIdentidade({ email, senha });
+  // 1) Cria a identidade (lança EmailJaCadastradoError se o e-mail já existe no provedor). O admin
+  //    nasce `dono` (papel administrativo): marca `requires_mfa` no app_metadata (entra no JWT)
+  //    para o middleware exigir 2FA sem consultar o banco no edge.
+  const authUserId = await deps.auth.criarIdentidade({
+    email,
+    senha,
+    appMetadata: { papel: "dono", requires_mfa: true },
+  });
 
   // 2) Persiste o tenant + admin + estações. Se falhar, compensa a identidade (passo 3).
   try {

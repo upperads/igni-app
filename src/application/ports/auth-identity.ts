@@ -6,6 +6,8 @@
 export interface CriarIdentidadeInput {
   email: string;
   senha: string;
+  /** Metadados gravados no `app_metadata` (entram no JWT; ex.: papel, requires_mfa). */
+  appMetadata?: Record<string, unknown>;
 }
 
 export interface AuthIdentityPort {

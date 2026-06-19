@@ -1,11 +1,32 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ROTAS_PUBLICAS = ["/login", "/criar-conta"];
+
+function ehPublica(path: string): boolean {
+  return ROTAS_PUBLICAS.some((r) => path === r || path.startsWith(`${r}/`));
+}
+
+function redirecionar(request: NextRequest, response: NextResponse, destino: string): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = destino;
+  url.search = "";
+  const redir = NextResponse.redirect(url);
+  // Preserva os cookies de sessão que o Supabase possa ter renovado.
+  for (const cookie of response.cookies.getAll()) {
+    redir.cookies.set(cookie);
+  }
+  return redir;
+}
+
 /**
- * Renova a sessão do Supabase a cada request (padrão @supabase/ssr). Mantém o token fresco nos
- * cookies. NÃO faz proteção de rota ainda — isso entra junto do 2FA (exigir AAL2 para admin).
+ * Renova a sessão (padrão @supabase/ssr) E protege as rotas:
+ * - não autenticado em rota protegida → /login;
+ * - autenticado que precisa de 2FA (papel admin via `requires_mfa`, ou fator verificado pendente
+ *   de step-up) e ainda não está em AAL2 → /login/2fa;
+ * - já resolvido, mas numa tela de auth → /.
  */
-export async function atualizarSessao(request: NextRequest): Promise<NextResponse> {
+export async function atualizarSessaoEProteger(request: NextRequest): Promise<NextResponse> {
   let response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,8 +52,32 @@ export async function atualizarSessao(request: NextRequest): Promise<NextRespons
     },
   });
 
-  // Necessário para disparar a renovação do token. Não inserir lógica entre criar o client e isto.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const path = request.nextUrl.pathname;
+  const eh2fa = path === "/login/2fa";
+
+  if (!user) {
+    if (ehPublica(path) || eh2fa) {
+      return response;
+    }
+    return redirecionar(request, response, "/login");
+  }
+
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const emAal2 = aal?.currentLevel === "aal2";
+  const fatorVerificadoPendente = aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2";
+  const exigeMfa = user.app_metadata?.requires_mfa === true;
+  const precisa2fa = !emAal2 && (fatorVerificadoPendente || exigeMfa);
+
+  if (precisa2fa) {
+    return eh2fa ? response : redirecionar(request, response, "/login/2fa");
+  }
+
+  if (ehPublica(path) || eh2fa) {
+    return redirecionar(request, response, "/");
+  }
 
   return response;
 }

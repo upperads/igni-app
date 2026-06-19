@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { sair } from "@/app/logout/actions";
 import { cn } from "@/ui/cn";
 import { RiskRail } from "./risk-rail";
 
@@ -57,6 +58,14 @@ export function AppShell({ children, alarme = false, setor }: Props) {
           >
             RC
           </span>
+          <form action={sair}>
+            <button
+              type="submit"
+              className="rounded-md px-2 py-2 font-body text-sm text-aco-400 transition-colors hover:text-aco-100"
+            >
+              Sair
+            </button>
+          </form>
         </div>
       </header>
 

@@ -15,11 +15,12 @@ export function createSupabaseAuthIdentity(
   });
 
   return {
-    async criarIdentidade({ email, senha }: CriarIdentidadeInput): Promise<string> {
+    async criarIdentidade({ email, senha, appMetadata }: CriarIdentidadeInput): Promise<string> {
       const { data, error } = await admin.auth.admin.createUser({
         email,
         password: senha,
         email_confirm: true,
+        app_metadata: appMetadata,
       });
 
       if (error) {

@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
-import { atualizarSessao } from "@/infra/auth/supabase-middleware";
+import { atualizarSessaoEProteger } from "@/infra/auth/supabase-middleware";
 
 export function middleware(request: NextRequest) {
-  return atualizarSessao(request);
+  return atualizarSessaoEProteger(request);
 }
 
 export const config = {
