@@ -34,7 +34,7 @@
     - ✅ *Domínio* (`src/domain/os/triagem.ts`): **razão crítica** (`trabalho_restante ÷ dias_restantes`, com bônus de atraso), **gatilhos do ramo** (frota parada / máquina única do produtor / retrabalho de garantia), bucket `prioridade ∈ {critica,alta,normal,baixa}` por **limiares configuráveis** (SLAs), e a **regra da vez** (`ordenarFila`: travado por culpa do cliente cede a vez, por culpa da empresa mantém). Pesos/SLAs injetados (configuráveis, CLAUDE.md). Datas UTC. **19 testes** de unidade.
     - ✅ *Schema*: colunas na `os` (`prioridade`, `prioridade_score`, `prioridade_override`, `travado`, `travamento_motivo`, `travamento_responsabilidade`), enums `prioridade_os`/`responsabilidade`, e tabela de auditoria `ajuste_prioridade` (override registrado: quem/quando/de→para/motivo). RLS por tenant na mesma leva (migrations **0008** estrutura + **0009** RLS). Teste de drift dos enums.
     - ✅ *Casos de uso*: `recalcularPrioridade`/`aplicarPrioridade` (lê insumos, calcula, persiste score + bucket efetivo `override ?? calculado`), `ajustarPrioridade` (override + auditoria), `travar`/`destravar` (motivo + responsabilidade). A composição recalcula a prioridade após abrir e após cada transição (board honesto). **5 testes** de integração.
-    - ✅ *UI*: `/triagem` (fila ordenada por impacto com a regra da vez, selo de travamento, badge de prioridade) e no detalhe da OS — badges de prioridade/travamento + seção de triagem (travar/destravar + fixar prioridade). typecheck/lint/build verdes; **74 testes** no total.
+    - ✅ *UI*: `/triagem` (fila ordenada por impacto com a regra da vez, selo de travamento, badge de prioridade) e no detalhe da OS — badges de prioridade/travamento + seção de triagem (travar/destravar + fixar prioridade). typecheck/lint/build verdes; **74 testes** no total. **No ar (20/06)**: CI verde (`28483d5`), cloud migrado (0008/0009 — 6 colunas na `os` + `ajuste_prioridade` com RLS) e deploy via `railway up --ci`; smoke test: `/login` 200; `/`, `/triagem`, `/os` → 307 p/ `/login`.
 - **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
   - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
   - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.
@@ -48,4 +48,4 @@
 - **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), 008 (máquina de estados da OS), **009 (triagem: razão crítica + travamento)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
-- **Última atualização**: 19/06
+- **Última atualização**: 20/06
