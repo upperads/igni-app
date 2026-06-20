@@ -1,8 +1,11 @@
 /**
- * Paleta de SINAL/triagem. A triagem nunca depende só da cor: sempre cor + rótulo + posição
- * (WCAG / daltonismo). Cada sinal carrega o rótulo e as classes de cor (Tailwind lê os literais).
+ * Paleta de SINAL/triagem (apresentação). O significado do sinal mora no domínio (`@/domain/os/painel`);
+ * aqui ficam só as classes de cor e os rótulos. A triagem nunca depende só da cor: sempre cor +
+ * rótulo + posição (WCAG / daltonismo). Tailwind lê os literais das classes.
  */
-export type Sinal = "critico" | "atraso" | "atencao" | "emdia" | "aguardando";
+import type { Sinal } from "@/domain/os/painel";
+
+export type { Sinal };
 
 export interface SinalInfo {
   rotulo: string;

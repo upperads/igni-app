@@ -19,14 +19,16 @@ import {
   travar,
   type TravarInput,
 } from "@/application/triagem";
-import type { EstadoOS } from "@/domain/os/estado";
+import { ESTADOS_OS, type EstadoOS, rotuloEstado } from "@/domain/os/estado";
+import { calcularKpis, type Kpis, type Sinal, sinalDaOs } from "@/domain/os/painel";
 import {
+  diasRestantesAte,
   ordenarFila,
   type Prioridade,
   type Responsabilidade,
 } from "@/domain/os/triagem";
 import { database } from "@/infra/db/client";
-import { cliente, entrada, equipamento, evento, os } from "@/infra/db/schema";
+import { cliente, entrada, equipamento, evento, os, usuario } from "@/infra/db/schema";
 
 /** Composição da OS: liga os casos de uso + as queries de leitura ao tenant corrente (withTenant). */
 
@@ -128,6 +130,116 @@ export async function listarTriagem(sessao: SessaoTenant): Promise<ItemTriagem[]
       .where(ne(os.estado, "entregue")),
   );
   return ordenarFila(linhas);
+}
+
+export interface CardPainel {
+  id: string;
+  codigo: string;
+  equipamento: string;
+  responsavel: string | null;
+  estado: EstadoOS;
+  sinal: Sinal;
+  prazoLabel: string;
+  travado: boolean;
+  travamentoResponsabilidade: Responsabilidade | null;
+}
+
+export interface EtapaPainel {
+  estado: EstadoOS;
+  rotulo: string;
+  cards: CardPainel[];
+}
+
+export interface PainelDados {
+  kpis: Kpis;
+  etapas: EtapaPainel[];
+}
+
+/** Ref curta da OS até existir número sequencial por tenant (follow-up). */
+function refCurta(id: string): string {
+  return id.slice(0, 8);
+}
+
+function prazoLabel(dias: number | null): string {
+  if (dias === null) {
+    return "—";
+  }
+  if (dias < 0) {
+    return `atrasado ${-dias}d`;
+  }
+  if (dias === 0) {
+    return "hoje";
+  }
+  return `${dias}d`;
+}
+
+/**
+ * Painel de gestão (US-09/11): OS ativas agrupadas por etapa (na ordem da linha de produção), cada
+ * uma com seu sinal de triagem, mais os KPIs com o atraso separando a culpa. `agora` é injetado.
+ */
+export async function listarPainel(
+  sessao: SessaoTenant,
+  agora: Date = new Date(),
+): Promise<PainelDados> {
+  const linhas = await database.withTenant(sessao.tenantId, (tx) =>
+    tx
+      .select({
+        id: os.id,
+        equipamento: equipamento.tipo,
+        responsavel: usuario.nome,
+        estado: os.estado,
+        prioridade: os.prioridade,
+        travado: os.travado,
+        travamentoResponsabilidade: os.travamentoResponsabilidade,
+        prazoPrometido: os.prazoPrometido,
+        criadoEm: os.createdAt,
+      })
+      .from(os)
+      .innerJoin(equipamento, eq(equipamento.id, os.equipamentoId))
+      .leftJoin(usuario, eq(usuario.id, os.responsavelId))
+      .where(ne(os.estado, "entregue")),
+  );
+
+  const enriquecidas = linhas.map((l) => {
+    const diasRestantes = diasRestantesAte(l.prazoPrometido, agora);
+    return {
+      ...l,
+      diasRestantes,
+      sinal: sinalDaOs({ prioridade: l.prioridade, travado: l.travado, diasRestantes }),
+    };
+  });
+
+  const kpis = calcularKpis(
+    enriquecidas.map((l) => ({
+      prioridade: l.prioridade,
+      travado: l.travado,
+      travamentoResponsabilidade: l.travamentoResponsabilidade,
+      estado: l.estado,
+      diasRestantes: l.diasRestantes,
+    })),
+  );
+
+  const etapas: EtapaPainel[] = ESTADOS_OS.filter((e) => e !== "entregue")
+    .map((estado) => ({
+      estado,
+      rotulo: rotuloEstado(estado),
+      cards: enriquecidas
+        .filter((l) => l.estado === estado)
+        .map<CardPainel>((l) => ({
+          id: l.id,
+          codigo: refCurta(l.id),
+          equipamento: l.equipamento,
+          responsavel: l.responsavel,
+          estado: l.estado,
+          sinal: l.sinal,
+          prazoLabel: prazoLabel(l.diasRestantes),
+          travado: l.travado,
+          travamentoResponsabilidade: l.travamentoResponsabilidade,
+        })),
+    }))
+    .filter((etapa) => etapa.cards.length > 0);
+
+  return { kpis, etapas };
 }
 
 export interface EventoOs {

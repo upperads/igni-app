@@ -1,31 +1,23 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { sessaoAtual } from "@/infra/auth/sessao";
+import { listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { Button } from "@/ui/components/button";
 import { KpiStat } from "@/ui/components/kpi-stat";
 import { OsCard } from "@/ui/components/os-card";
-import { StatusPill } from "@/ui/components/status-pill";
-import type { Sinal } from "@/ui/sinal";
 
-const FILA: Array<{
-  codigo: string;
-  equipamento: string;
-  responsavel: string | null;
-  prazo: string;
-  sinal: Sinal;
-  travado?: boolean;
-}> = [
-  { codigo: "OS-2041", equipamento: "Scania DC13", responsavel: "Marcão", prazo: "03d", sinal: "critico" },
-  { codigo: "OS-2038", equipamento: "JD PowerTech", responsavel: "Cleiton", prazo: "02d", sinal: "atraso", travado: true },
-  { codigo: "OS-2050", equipamento: "MF Perkins", responsavel: null, prazo: "06d", sinal: "emdia" },
-  { codigo: "OS-2044", equipamento: "Cummins ISX", responsavel: "Tide", prazo: "04d", sinal: "atencao" },
-  { codigo: "OS-2052", equipamento: "Volvo D13", responsavel: "Bia", prazo: "—", sinal: "aguardando" },
-];
+export default async function Home() {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    redirect("/login");
+  }
 
-const LEGENDA: Sinal[] = ["critico", "atraso", "atencao", "emdia", "aguardando"];
+  const { kpis, etapas } = await listarPainel(sessao);
+  const alarme = kpis.paradaCritica > 0 || kpis.atraso.total > 0;
 
-export default function Home() {
   return (
-    <AppShell alarme setor="Setor: Cabeçote">
+    <AppShell alarme={alarme}>
       <Link
         href="/primeiros-passos"
         className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-ambar-600/40 bg-grafite-800 px-5 py-4 transition-colors hover:border-ambar-600/70"
@@ -48,36 +40,61 @@ export default function Home() {
             A oficina inteira de relance, em tempo real. O atraso é a manchete.
           </p>
         </div>
-        <Button variante="fantasma">Modo TV</Button>
+        <Link href="/painel/tv">
+          <Button variante="fantasma">Modo TV</Button>
+        </Link>
       </div>
 
       <section aria-label="Indicadores de gestão" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <KpiStat rotulo="Na casa" valor="24" />
-        <KpiStat rotulo="Parada crítica" valor="3" />
-        <KpiStat rotulo="Travadas" valor="5" />
-        <KpiStat rotulo="Atraso" valor="2" manchete alarme />
+        <KpiStat rotulo="Na casa" valor={String(kpis.naCasa)} />
+        <KpiStat rotulo="Parada crítica" valor={String(kpis.paradaCritica)} alarme={kpis.paradaCritica > 0} />
+        <KpiStat rotulo="Travadas" valor={String(kpis.travadas)} />
+        <KpiStat rotulo="Atraso" valor={String(kpis.atraso.total)} manchete alarme={kpis.atraso.total > 0} />
       </section>
 
-      <section className="mt-8" aria-label="Fila do setor Cabeçote">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="font-display text-xl text-aco-100">Cabeçote</h2>
-          <span className="font-mono text-xs text-aco-400">fila 3 · exec 2 · travada 1</span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FILA.map((os) => (
-            <OsCard key={os.codigo} {...os} />
-          ))}
-        </div>
-      </section>
+      {kpis.atraso.total > 0 ? (
+        <p className="mt-3 font-mono text-xs text-aco-400">
+          Atraso, de quem é a bola:{" "}
+          <span className="text-aco-200">{kpis.atraso.nossa} nossa</span> ·{" "}
+          <span className="text-aco-200">{kpis.atraso.cliente} cliente</span> ·{" "}
+          <span className="text-aco-200">{kpis.atraso.peca} peça</span>
+        </p>
+      ) : null}
 
-      <section className="mt-8" aria-label="Legenda da triagem">
-        <h2 className="mb-3 font-mono text-xs uppercase tracking-widest text-aco-400">Triagem</h2>
-        <div className="flex flex-wrap gap-2">
-          {LEGENDA.map((s) => (
-            <StatusPill key={s} sinal={s} />
-          ))}
+      {etapas.length === 0 ? (
+        <div className="mt-8 rounded-lg border border-dashed border-grafite-600 bg-grafite-850 px-6 py-12 text-center">
+          <p className="font-display text-lg text-aco-100">Nenhuma OS ativa na casa.</p>
+          <p className="mx-auto mt-1 max-w-prose font-body text-sm text-aco-400">
+            Quando um equipamento entrar, abra a OS e ela aparece aqui, na etapa certa.
+          </p>
+          <Link href="/os/nova" className="mt-5 inline-flex font-mono text-sm text-ambar-500 hover:underline">
+            Abrir uma OS →
+          </Link>
         </div>
-      </section>
+      ) : (
+        etapas.map((etapa) => (
+          <section key={etapa.estado} className="mt-8" aria-label={`Etapa ${etapa.rotulo}`}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="font-display text-xl text-aco-100">{etapa.rotulo}</h2>
+              <span className="font-mono text-xs text-aco-400">{etapa.cards.length} OS</span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {etapa.cards.map((card) => (
+                <Link key={card.id} href={`/os/${card.id}`} className="block">
+                  <OsCard
+                    codigo={card.codigo}
+                    equipamento={card.equipamento}
+                    responsavel={card.responsavel}
+                    prazo={card.prazoLabel}
+                    sinal={card.sinal}
+                    travado={card.travado}
+                  />
+                </Link>
+              ))}
+            </div>
+          </section>
+        ))
+      )}
     </AppShell>
   );
 }
