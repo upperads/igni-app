@@ -37,3 +37,9 @@ export const modalidadeEntrada = pgEnum("modalidade_entrada", [
 
 /** Tipo de cliente (P4 do PRD). */
 export const tipoCliente = pgEnum("tipo_cliente", ["frota", "produtor", "avulso"]);
+
+/** Prioridade da OS (bucket da triagem, M3 / ADR-009). Espelha `PRIORIDADES` do domínio (teste de drift). */
+export const prioridadeOs = pgEnum("prioridade_os", ["critica", "alta", "normal", "baixa"]);
+
+/** Responsabilidade do travamento (M3 / RN-03): de quem é a bola enquanto a OS está travada. */
+export const responsabilidade = pgEnum("responsabilidade", ["empresa", "cliente"]);

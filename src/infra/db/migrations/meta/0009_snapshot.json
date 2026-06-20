@@ -1,0 +1,997 @@
+{
+  "id": "e7db7acb-3ed4-4804-a03d-23207aa5d2a1",
+  "prevId": "de9f6fd0-9c74-4a3c-9c42-c5fc111b3a00",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.tenant": {
+      "name": "tenant",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_ramo": {
+          "name": "template_ramo",
+          "type": "template_ramo",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.usuario": {
+      "name": "usuario",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "auth_user_id": {
+          "name": "auth_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "papel": {
+          "name": "papel",
+          "type": "papel_usuario",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tfa_ativo": {
+          "name": "tfa_ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "usuario_email_unico": {
+          "name": "usuario_email_unico",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "usuario_tenant_id_tenant_id_fk": {
+          "name": "usuario_tenant_id_tenant_id_fk",
+          "tableFrom": "usuario",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "usuario_auth_user_id_unique": {
+          "name": "usuario_auth_user_id_unique",
+          "columns": [
+            "auth_user_id"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.estacao": {
+      "name": "estacao",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordem": {
+          "name": "ordem",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "estacao_tenant_id_tenant_id_fk": {
+          "name": "estacao_tenant_id_tenant_id_fk",
+          "tableFrom": "estacao",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tentativa_login": {
+      "name": "tentativa_login",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ocorrido_em": {
+          "name": "ocorrido_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tentativa_login_email_ocorrido_idx": {
+          "name": "tentativa_login_email_ocorrido_idx",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ocorrido_em",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cliente": {
+      "name": "cliente",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contato_whatsapp": {
+          "name": "contato_whatsapp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "tipo_cliente",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "cliente_tenant_id_tenant_id_fk": {
+          "name": "cliente_tenant_id_tenant_id_fk",
+          "tableFrom": "cliente",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.equipamento": {
+      "name": "equipamento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cliente_id": {
+          "name": "cliente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "placa": {
+          "name": "placa",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chassi": {
+          "name": "chassi",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "modelo_motor": {
+          "name": "modelo_motor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "maquina_unica": {
+          "name": "maquina_unica",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "equipamento_tenant_id_tenant_id_fk": {
+          "name": "equipamento_tenant_id_tenant_id_fk",
+          "tableFrom": "equipamento",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "equipamento_cliente_id_cliente_id_fk": {
+          "name": "equipamento_cliente_id_cliente_id_fk",
+          "tableFrom": "equipamento",
+          "columnsFrom": [
+            "cliente_id"
+          ],
+          "tableTo": "cliente",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.entrada": {
+      "name": "entrada",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cliente_id": {
+          "name": "cliente_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "modalidade": {
+          "name": "modalidade",
+          "type": "modalidade_entrada",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pecas_recebidas": {
+          "name": "pecas_recebidas",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fotos": {
+          "name": "fotos",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_entrada": {
+          "name": "data_entrada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "entrada_tenant_id_tenant_id_fk": {
+          "name": "entrada_tenant_id_tenant_id_fk",
+          "tableFrom": "entrada",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "entrada_cliente_id_cliente_id_fk": {
+          "name": "entrada_cliente_id_cliente_id_fk",
+          "tableFrom": "entrada",
+          "columnsFrom": [
+            "cliente_id"
+          ],
+          "tableTo": "cliente",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.os": {
+      "name": "os",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entrada_id": {
+          "name": "entrada_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "equipamento_id": {
+          "name": "equipamento_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estacao_id": {
+          "name": "estacao_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "responsavel_id": {
+          "name": "responsavel_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo_servico": {
+          "name": "tipo_servico",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aberta'"
+        },
+        "prioridade": {
+          "name": "prioridade",
+          "type": "prioridade_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'normal'"
+        },
+        "prioridade_score": {
+          "name": "prioridade_score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "prioridade_override": {
+          "name": "prioridade_override",
+          "type": "prioridade_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "travado": {
+          "name": "travado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "travamento_motivo": {
+          "name": "travamento_motivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "travamento_responsabilidade": {
+          "name": "travamento_responsabilidade",
+          "type": "responsabilidade",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prazo_prometido": {
+          "name": "prazo_prometido",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entrou_no_estado_em": {
+          "name": "entrou_no_estado_em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "os_tenant_id_tenant_id_fk": {
+          "name": "os_tenant_id_tenant_id_fk",
+          "tableFrom": "os",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "os_entrada_id_entrada_id_fk": {
+          "name": "os_entrada_id_entrada_id_fk",
+          "tableFrom": "os",
+          "columnsFrom": [
+            "entrada_id"
+          ],
+          "tableTo": "entrada",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "os_equipamento_id_equipamento_id_fk": {
+          "name": "os_equipamento_id_equipamento_id_fk",
+          "tableFrom": "os",
+          "columnsFrom": [
+            "equipamento_id"
+          ],
+          "tableTo": "equipamento",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "os_estacao_id_estacao_id_fk": {
+          "name": "os_estacao_id_estacao_id_fk",
+          "tableFrom": "os",
+          "columnsFrom": [
+            "estacao_id"
+          ],
+          "tableTo": "estacao",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        },
+        "os_responsavel_id_usuario_id_fk": {
+          "name": "os_responsavel_id_usuario_id_fk",
+          "tableFrom": "os",
+          "columnsFrom": [
+            "responsavel_id"
+          ],
+          "tableTo": "usuario",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.evento": {
+      "name": "evento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "os_id": {
+          "name": "os_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "de_estado": {
+          "name": "de_estado",
+          "type": "estado_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "para_estado": {
+          "name": "para_estado",
+          "type": "estado_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "por_usuario_id": {
+          "name": "por_usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motivo": {
+          "name": "motivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "em": {
+          "name": "em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "evento_tenant_id_tenant_id_fk": {
+          "name": "evento_tenant_id_tenant_id_fk",
+          "tableFrom": "evento",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "evento_os_id_os_id_fk": {
+          "name": "evento_os_id_os_id_fk",
+          "tableFrom": "evento",
+          "columnsFrom": [
+            "os_id"
+          ],
+          "tableTo": "os",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "evento_por_usuario_id_usuario_id_fk": {
+          "name": "evento_por_usuario_id_usuario_id_fk",
+          "tableFrom": "evento",
+          "columnsFrom": [
+            "por_usuario_id"
+          ],
+          "tableTo": "usuario",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ajuste_prioridade": {
+      "name": "ajuste_prioridade",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "os_id": {
+          "name": "os_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "de_prioridade": {
+          "name": "de_prioridade",
+          "type": "prioridade_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "para_prioridade": {
+          "name": "para_prioridade",
+          "type": "prioridade_os",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "motivo": {
+          "name": "motivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "por_usuario_id": {
+          "name": "por_usuario_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "em": {
+          "name": "em",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "ajuste_prioridade_tenant_id_tenant_id_fk": {
+          "name": "ajuste_prioridade_tenant_id_tenant_id_fk",
+          "tableFrom": "ajuste_prioridade",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "tableTo": "tenant",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "ajuste_prioridade_os_id_os_id_fk": {
+          "name": "ajuste_prioridade_os_id_os_id_fk",
+          "tableFrom": "ajuste_prioridade",
+          "columnsFrom": [
+            "os_id"
+          ],
+          "tableTo": "os",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "ajuste_prioridade_por_usuario_id_usuario_id_fk": {
+          "name": "ajuste_prioridade_por_usuario_id_usuario_id_fk",
+          "tableFrom": "ajuste_prioridade",
+          "columnsFrom": [
+            "por_usuario_id"
+          ],
+          "tableTo": "usuario",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "set null"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.estado_os": {
+      "name": "estado_os",
+      "schema": "public",
+      "values": [
+        "aberta",
+        "diagnostico",
+        "orcamento",
+        "aguardando_aprovacao",
+        "aguardando_peca",
+        "execucao",
+        "controle_qualidade",
+        "pronta",
+        "entregue"
+      ]
+    },
+    "public.modalidade_entrada": {
+      "name": "modalidade_entrada",
+      "schema": "public",
+      "values": [
+        "so_usinagem",
+        "empresa_retira",
+        "ja_desmontado"
+      ]
+    },
+    "public.papel_usuario": {
+      "name": "papel_usuario",
+      "schema": "public",
+      "values": [
+        "dono",
+        "gestor",
+        "recepcao",
+        "producao"
+      ]
+    },
+    "public.prioridade_os": {
+      "name": "prioridade_os",
+      "schema": "public",
+      "values": [
+        "critica",
+        "alta",
+        "normal",
+        "baixa"
+      ]
+    },
+    "public.responsabilidade": {
+      "name": "responsabilidade",
+      "schema": "public",
+      "values": [
+        "empresa",
+        "cliente"
+      ]
+    },
+    "public.template_ramo": {
+      "name": "template_ramo",
+      "schema": "public",
+      "values": [
+        "retifica_pesada_agro",
+        "retifica_leve",
+        "centro_automotivo"
+      ]
+    },
+    "public.tipo_cliente": {
+      "name": "tipo_cliente",
+      "schema": "public",
+      "values": [
+        "frota",
+        "produtor",
+        "avulso"
+      ]
+    }
+  },
+  "schemas": {},
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

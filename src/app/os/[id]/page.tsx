@@ -5,7 +5,10 @@ import { sessaoAtual } from "@/infra/auth/sessao";
 import { detalheOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { EstadoBadge } from "@/ui/components/estado-badge";
+import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
+import { RESPONSABILIDADE_ROTULO, TravamentoSelo } from "@/ui/components/travamento-selo";
 import { AcoesOs } from "./acoes";
+import { AcoesTriagem } from "./triagem";
 
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -54,8 +57,20 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
             {os.cliente.nome} · {TIPO_CLIENTE_ROTULO[os.cliente.tipo] ?? os.cliente.tipo}
             {os.equipamento.placa ? ` · ${os.equipamento.placa}` : ""}
           </p>
+          {os.travado && os.travamentoMotivo ? (
+            <p className="mt-1.5 font-body text-sm text-ambar-500">
+              Travado: {os.travamentoMotivo}
+              {os.travamentoResponsabilidade
+                ? ` (${RESPONSABILIDADE_ROTULO[os.travamentoResponsabilidade]})`
+                : ""}
+            </p>
+          ) : null}
         </div>
-        <EstadoBadge estado={os.estado} className="mt-1.5" />
+        <div className="flex flex-wrap items-center gap-2">
+          <EstadoBadge estado={os.estado} />
+          <PrioridadeBadge prioridade={os.prioridade} />
+          {os.travado ? <TravamentoSelo responsabilidade={os.travamentoResponsabilidade} /> : null}
+        </div>
       </div>
 
       <section aria-label="As quatro perguntas" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -70,6 +85,16 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
       <section className="mt-8" aria-label="Próximo passo">
         <h2 className="mb-3 font-display text-xl text-aco-100">Próximo passo</h2>
         <AcoesOs osId={os.id} proximos={proximos} />
+      </section>
+
+      <section className="mt-8" aria-label="Triagem">
+        <h2 className="mb-3 font-display text-xl text-aco-100">Triagem</h2>
+        <AcoesTriagem
+          osId={os.id}
+          prioridade={os.prioridade}
+          temOverride={os.prioridadeOverride !== null}
+          travado={os.travado}
+        />
       </section>
 
       <section className="mt-8" aria-label="Linha do tempo">

@@ -1,9 +1,9 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução em andamento.** Inception completa. Auth completa (Wave 3, US-01/02/03 + UI 3d). **M2 (OS) CONCLUÍDO**: máquina de estados (ADR-008), schema OS + casos de uso, e **UI da OS** (lista + detalhe com as 4 perguntas + linha do tempo + ações de transição + abrir OS). App no ar no Railway (ADR-007).
-- **Aprovado até**: Fases 1–3; ADR-004/005/006/007/008; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados; M2 aprovado.
-- **Próximo passo**: M3 — prioridade/triagem (razão crítica, travamento, regra da vez) e o painel em tempo real (Realtime). Gates de orçamento/CQ ganham contexto real no M5.
+- **Fase atual**: **Execução em andamento.** Inception completa. Auth completa (Wave 3). M2 (OS) concluído. **M3 (Triagem & Travamento) CONCLUÍDO**: razão crítica + gatilhos do ramo + override registrado (US-07), travamento separado + regra da vez (US-08), com ADR-009, schema, domínio puro, casos de uso e UI (fila `/triagem` + ações no detalhe). App no ar no Railway (ADR-007).
+- **Aprovado até**: Fases 1–3; ADR-004/005/006/007/008/009; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados; M2 e M3 aprovados.
+- **Próximo passo**: M4 — Painel & Realtime (modo TV por setor, cor por tempo, "bump", KPIs, canal pub/sub Supabase Realtime, alvo < 2s). Gates de orçamento/CQ ganham contexto real no M5.
 - **Ops / Infra (ADR-007)**:
   - **🚀 App em produção**: **https://igni-app-production.up.railway.app** — 1º deploy via Railway CLI (`railway up`) **concluído e no ar** (19/06). Smoke test (curl): `/login` → 200; `/` → 307 p/ `/login` (middleware protege em prod). Secrets do cloud setados no serviço. Build pinado a `pnpm@10.33.0` + Node ≥20 (a versão de pnpm do Railpack exigia `packages` no workspace; o pin resolveu).
   - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). `main` em `upperads/igni-app`.
@@ -30,6 +30,11 @@
     - ✅ *Schema + RLS*: `cliente`/`equipamento`/`entrada`/`os`/`evento`, todos com `tenant_id` + política RLS de isolamento (migrations **0006** tabelas, **0007** RLS: `GRANT app_user` + ENABLE sem FORCE + policies). Enums `estado_os`, `modalidade_entrada`, `tipo_cliente`.
     - ✅ *Casos de uso* (escopados por `withTenant` → RLS ativa, **1ª escrita pelo caminho do tenant**): `abrirOS` (US-04 — cria cliente+equipamento+entrada+OS `aberta` + EVENTO de abertura) e `executarTransicao` (US-05 — valida estrutura+gates, muda estado, grava EVENTO). Erros de domínio dedicados. **50 testes** verdes (gate barrando/liberando, transição inválida, OS inexistente).
     - ✅ *UI da OS*: `/os` (lista + estado vazio), `/os/nova` (abrir OS — form client + server action + redirect ao detalhe), `/os/[id]` (as 4 perguntas em cartões, **linha do tempo** dos eventos, **ações de transição** com `useTransition` + `router.refresh`). Helper `sessaoAtual()` (Supabase user → perfil tenant/papel) e composição `infra/composition/os.ts` (queries via `withTenant` + wrappers dos casos de uso). Badge de estado (cor+rótulo, nunca só cor). Contexto dos gates ainda vazio (M5 liga orçamento/CQ) → execução/pronta barram com o motivo do gate — a regra de ouro em ação. typecheck/lint/build/test verdes. **No ar (19/06)**: cloud migrado (0006/0007 — `cliente/equipamento/entrada/os/evento` com `rls=true`, 1 policy cada) e deploy via `railway up --ci`; smoke test: `/login` 200; `/`, `/os`, `/os/nova`, `/primeiros-passos` → 307 p/ `/login` (protegidas). Commits `6a681e9` (UI) + `d739b8a` (fix do CI: `version` do `pnpm/action-setup` conflitava com o `packageManager` pinado → removido).
+  - **M3 (Triagem & Travamento)** ✅ — **ADR-009**.
+    - ✅ *Domínio* (`src/domain/os/triagem.ts`): **razão crítica** (`trabalho_restante ÷ dias_restantes`, com bônus de atraso), **gatilhos do ramo** (frota parada / máquina única do produtor / retrabalho de garantia), bucket `prioridade ∈ {critica,alta,normal,baixa}` por **limiares configuráveis** (SLAs), e a **regra da vez** (`ordenarFila`: travado por culpa do cliente cede a vez, por culpa da empresa mantém). Pesos/SLAs injetados (configuráveis, CLAUDE.md). Datas UTC. **19 testes** de unidade.
+    - ✅ *Schema*: colunas na `os` (`prioridade`, `prioridade_score`, `prioridade_override`, `travado`, `travamento_motivo`, `travamento_responsabilidade`), enums `prioridade_os`/`responsabilidade`, e tabela de auditoria `ajuste_prioridade` (override registrado: quem/quando/de→para/motivo). RLS por tenant na mesma leva (migrations **0008** estrutura + **0009** RLS). Teste de drift dos enums.
+    - ✅ *Casos de uso*: `recalcularPrioridade`/`aplicarPrioridade` (lê insumos, calcula, persiste score + bucket efetivo `override ?? calculado`), `ajustarPrioridade` (override + auditoria), `travar`/`destravar` (motivo + responsabilidade). A composição recalcula a prioridade após abrir e após cada transição (board honesto). **5 testes** de integração.
+    - ✅ *UI*: `/triagem` (fila ordenada por impacto com a regra da vez, selo de travamento, badge de prioridade) e no detalhe da OS — badges de prioridade/travamento + seção de triagem (travar/destravar + fixar prioridade). typecheck/lint/build verdes; **74 testes** no total.
 - **Dívida técnica / follow-ups do review da US-01** (não bloqueiam):
   - (BAIXA) Guarda de fronteira de import: proibir uso do `db` privilegiado (bypass RLS) fora de `infra`/onboarding quando surgirem rotas — fazer na Wave 3.
   - (BAIXA) Endurecer validação de e-mail (hoje `includes("@")`) na US-02; trocar `oficina!.id`/`admin!.id` por checagem explícita do `.returning()`.
@@ -40,7 +45,7 @@
   - Uptime alvo — a definir
   - Validar contraste da paleta de sinal sobre grafite (WCAG) na implementação
   - Fornecedores: **resolvido** — Supabase (Postgres+RLS+Auth+Realtime, ADR-004) + Drizzle (ADR-005). **WhatsApp** ainda em aberto → decide no M7.
-- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), **008 (máquina de estados da OS)** — em `/docs/adr/`
+- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), 008 (máquina de estados da OS), **009 (triagem: razão crítica + travamento)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
 - **Última atualização**: 19/06

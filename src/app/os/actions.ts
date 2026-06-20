@@ -4,9 +4,28 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { AbrirOSInput } from "@/application/abrir-os";
 import type { EstadoOS } from "@/domain/os/estado";
+import {
+  PRIORIDADES,
+  type Prioridade,
+  RESPONSABILIDADES,
+  type Responsabilidade,
+} from "@/domain/os/triagem";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { sessaoAtual } from "@/infra/auth/sessao";
-import { abrirOsNoTenant, transicionarNoTenant } from "@/infra/composition/os";
+import {
+  abrirOsNoTenant,
+  ajustarPrioridadeNoTenant,
+  destravarNoTenant,
+  transicionarNoTenant,
+  travarNoTenant,
+} from "@/infra/composition/os";
+
+/** Revalida as telas que mostram prioridade/travamento de uma OS. */
+function revalidarOs(osId: string): void {
+  revalidatePath(`/os/${osId}`);
+  revalidatePath("/triagem");
+  revalidatePath("/os");
+}
 
 const TIPOS_CLIENTE = ["frota", "produtor", "avulso"] as const;
 const MODALIDADES = ["so_usinagem", "empresa_retira", "ja_desmontado"] as const;
@@ -99,11 +118,81 @@ export async function acaoTransicionar(
       motivo,
     });
     if (r.ok) {
-      revalidatePath(`/os/${osId}`);
-      revalidatePath("/os");
+      revalidarOs(osId);
     }
     return { ok: r.ok, motivo: r.motivo };
   } catch {
     return { ok: false, motivo: "Não foi possível avançar a OS. Tente novamente." };
+  }
+}
+
+/** US-08 — trava a OS com motivo e responsabilidade (empresa/cliente). */
+export async function acaoTravar(
+  osId: string,
+  motivo: string,
+  responsabilidade: string,
+): Promise<ResultadoAcao> {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  }
+  if (!RESPONSABILIDADES.includes(responsabilidade as Responsabilidade)) {
+    return { ok: false, motivo: "Selecione de quem é a responsabilidade." };
+  }
+  const m = motivo.trim();
+  if (!m) {
+    return { ok: false, motivo: "Diga o porquê do travamento." };
+  }
+  try {
+    await travarNoTenant(sessao, {
+      osId,
+      motivo: m,
+      responsabilidade: responsabilidade as Responsabilidade,
+    });
+    revalidarOs(osId);
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Não foi possível travar a OS. Tente novamente." };
+  }
+}
+
+/** US-08 — destrava a OS. */
+export async function acaoDestravar(osId: string): Promise<ResultadoAcao> {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  }
+  try {
+    await destravarNoTenant(sessao, osId);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Não foi possível destravar a OS. Tente novamente." };
+  }
+}
+
+/** US-07 — override humano da prioridade (registrado). */
+export async function acaoAjustarPrioridade(
+  osId: string,
+  prioridade: string,
+  motivo: string,
+): Promise<ResultadoAcao> {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  }
+  if (!PRIORIDADES.includes(prioridade as Prioridade)) {
+    return { ok: false, motivo: "Selecione uma prioridade válida." };
+  }
+  try {
+    await ajustarPrioridadeNoTenant(sessao, {
+      osId,
+      prioridade: prioridade as Prioridade,
+      motivo: motivo.trim() || undefined,
+    });
+    revalidarOs(osId);
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Não foi possível ajustar a prioridade. Tente novamente." };
   }
 }

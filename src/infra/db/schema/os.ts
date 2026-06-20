@@ -1,8 +1,16 @@
-import { date, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  date,
+  doublePrecision,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { entrada } from "./entrada";
 import { equipamento } from "./equipamento";
 import { estacao } from "./estacao";
-import { estadoOs } from "./enums";
+import { estadoOs, prioridadeOs, responsabilidade } from "./enums";
 import { tenant } from "./tenant";
 import { usuario } from "./usuario";
 
@@ -25,6 +33,14 @@ export const os = pgTable("os", {
   responsavelId: uuid("responsavel_id").references(() => usuario.id, { onDelete: "set null" }),
   tipoServico: text("tipo_servico"),
   estado: estadoOs("estado").notNull().default("aberta"),
+  // Triagem (M3 / ADR-009). `prioridade` = bucket efetivo (override ?? calculado); `score` = urgência
+  // calculada; `override` = pino humano (nulável). Travamento é dimensão SEPARADA da prioridade.
+  prioridade: prioridadeOs("prioridade").notNull().default("normal"),
+  prioridadeScore: doublePrecision("prioridade_score").notNull().default(0),
+  prioridadeOverride: prioridadeOs("prioridade_override"),
+  travado: boolean("travado").notNull().default(false),
+  travamentoMotivo: text("travamento_motivo"),
+  travamentoResponsabilidade: responsabilidade("travamento_responsabilidade"),
   prazoPrometido: date("prazo_prometido"),
   entrouNoEstadoEm: timestamp("entrou_no_estado_em", { withTimezone: true }).notNull().defaultNow(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

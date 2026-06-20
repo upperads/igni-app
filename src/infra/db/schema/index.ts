@@ -12,3 +12,4 @@ export * from "./equipamento";
 export * from "./entrada";
 export * from "./os";
 export * from "./evento";
+export * from "./ajuste-prioridade";
