@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { type ContextoTransicao, type EstadoOS, validarTransicao } from "@/domain/os/estado";
 import { OsNaoEncontradaError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
@@ -60,5 +60,48 @@ export async function executarTransicao(
     });
 
     return { ok: true, estado: input.para };
+  });
+}
+
+/**
+ * US-10 — recall (desfazer): reverte a última transição da OS, voltando ao estado anterior e
+ * gravando o EVENTO do desfazer. É um undo explícito (não passa pela máquina pra frente). Não dá
+ * para desfazer a abertura. Escopado ao tenant.
+ */
+export async function recallTransicao(
+  database: Database,
+  sessao: SessaoTenant,
+  osId: string,
+): Promise<ResultadoExecucao> {
+  return database.withTenant(sessao.tenantId, async (tx) => {
+    const [ultimo] = await tx
+      .select({ deEstado: evento.deEstado, paraEstado: evento.paraEstado })
+      .from(evento)
+      .where(eq(evento.osId, osId))
+      .orderBy(desc(evento.em))
+      .limit(1);
+
+    if (!ultimo) {
+      throw new OsNaoEncontradaError(osId);
+    }
+    if (ultimo.deEstado === null) {
+      return { ok: false, motivo: "Não dá para desfazer a abertura da OS." };
+    }
+
+    await tx
+      .update(os)
+      .set({ estado: ultimo.deEstado, entrouNoEstadoEm: new Date() })
+      .where(eq(os.id, osId));
+
+    await tx.insert(evento).values({
+      tenantId: sessao.tenantId,
+      osId,
+      deEstado: ultimo.paraEstado,
+      paraEstado: ultimo.deEstado,
+      porUsuarioId: sessao.usuarioId,
+      motivo: "Recall (desfazer)",
+    });
+
+    return { ok: true, estado: ultimo.deEstado };
   });
 }

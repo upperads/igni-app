@@ -71,6 +71,16 @@ export function proximosEstados(de: EstadoOS): readonly EstadoOS[] {
   return TRANSICOES[de];
 }
 
+/**
+ * O "bump" (US-10): o único passo adiante, quando não há decisão a tomar. Retorna null nos estados
+ * que ramificam (decisão do cliente/CQ) — esses não se avançam por toque, exigem a tela de detalhe —
+ * e no estado final. Gates ainda valem: o bump para um destino gated pode ser barrado na execução.
+ */
+export function proximoBump(estado: EstadoOS): EstadoOS | null {
+  const prox = TRANSICOES[estado];
+  return prox.length === 1 ? prox[0]! : null;
+}
+
 /** Valida uma transição: estrutura + gates (RN-01). */
 export function validarTransicao(
   de: EstadoOS,

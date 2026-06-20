@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CardPainelBump } from "@/app/_components/card-painel-bump";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { Button } from "@/ui/components/button";
 import { KpiStat } from "@/ui/components/kpi-stat";
-import { OsCard } from "@/ui/components/os-card";
 
 export default async function Home() {
   const sessao = await sessaoAtual();
@@ -80,16 +80,17 @@ export default async function Home() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {etapa.cards.map((card) => (
-                <Link key={card.id} href={`/os/${card.id}`} className="block">
-                  <OsCard
-                    codigo={card.codigo}
-                    equipamento={card.equipamento}
-                    responsavel={card.responsavel}
-                    prazo={card.prazoLabel}
-                    sinal={card.sinal}
-                    travado={card.travado}
-                  />
-                </Link>
+                <CardPainelBump
+                  key={card.id}
+                  id={card.id}
+                  codigo={card.codigo}
+                  equipamento={card.equipamento}
+                  responsavel={card.responsavel}
+                  prazoLabel={card.prazoLabel}
+                  sinal={card.sinal}
+                  travado={card.travado}
+                  proximoBump={card.proximoBump}
+                />
               ))}
             </div>
           </section>

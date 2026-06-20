@@ -84,7 +84,11 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
 
       <section className="mt-8" aria-label="Próximo passo">
         <h2 className="mb-3 font-display text-xl text-aco-100">Próximo passo</h2>
-        <AcoesOs osId={os.id} proximos={proximos} />
+        <AcoesOs
+          osId={os.id}
+          proximos={proximos}
+          podeRecall={os.eventos.length > 0 && os.eventos[0]!.deEstado !== null}
+        />
       </section>
 
       <section className="mt-8" aria-label="Triagem">

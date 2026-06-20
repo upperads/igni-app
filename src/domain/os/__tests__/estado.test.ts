@@ -3,6 +3,7 @@ import {
   type ContextoTransicao,
   ESTADOS_OS,
   type EstadoOS,
+  proximoBump,
   proximosEstados,
   quatroPerguntas,
   validarTransicao,
@@ -68,5 +69,17 @@ describe("máquina de estados da OS (US-05)", () => {
 
   it("o enum estado_os do banco espelha ESTADOS_OS (sem drift)", () => {
     expect([...estadoOs.enumValues].sort()).toEqual([...ESTADOS_OS].sort());
+  });
+
+  it("proximoBump dá o único passo adiante; null quando ramifica ou termina", () => {
+    expect(proximoBump("aberta")).toBe("diagnostico");
+    expect(proximoBump("aguardando_peca")).toBe("execucao");
+    expect(proximoBump("execucao")).toBe("controle_qualidade");
+    expect(proximoBump("pronta")).toBe("entregue");
+    // ramificam (decisão) → sem bump
+    expect(proximoBump("aguardando_aprovacao")).toBeNull();
+    expect(proximoBump("controle_qualidade")).toBeNull();
+    // terminal → sem bump
+    expect(proximoBump("entregue")).toBeNull();
   });
 });

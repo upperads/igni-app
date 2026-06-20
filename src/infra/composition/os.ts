@@ -8,6 +8,7 @@ import {
 import {
   executarTransicao,
   type ExecutarTransicaoInput,
+  recallTransicao,
   type ResultadoExecucao,
 } from "@/application/executar-transicao";
 import {
@@ -19,7 +20,7 @@ import {
   travar,
   type TravarInput,
 } from "@/application/triagem";
-import { ESTADOS_OS, type EstadoOS, rotuloEstado } from "@/domain/os/estado";
+import { ESTADOS_OS, type EstadoOS, proximoBump, rotuloEstado } from "@/domain/os/estado";
 import { calcularKpis, type Kpis, type Sinal, sinalDaOs } from "@/domain/os/painel";
 import {
   diasRestantesAte,
@@ -49,6 +50,17 @@ export async function transicionarNoTenant(
   // Mudar de estado muda o "trabalho restante" → a prioridade pode mudar. Mantém o board honesto.
   if (r.ok) {
     await recalcularPrioridade(database, sessao, input.osId);
+  }
+  return r;
+}
+
+export async function recallNoTenant(
+  sessao: SessaoTenant,
+  osId: string,
+): Promise<ResultadoExecucao> {
+  const r = await recallTransicao(database, sessao, osId);
+  if (r.ok) {
+    await recalcularPrioridade(database, sessao, osId);
   }
   return r;
 }
@@ -142,6 +154,8 @@ export interface CardPainel {
   prazoLabel: string;
   travado: boolean;
   travamentoResponsabilidade: Responsabilidade | null;
+  /** Destino do "bump" (único passo adiante) ou null se há decisão/fim. */
+  proximoBump: EstadoOS | null;
 }
 
 export interface EtapaPainel {
@@ -235,6 +249,7 @@ export async function listarPainel(
           prazoLabel: prazoLabel(l.diasRestantes),
           travado: l.travado,
           travamentoResponsabilidade: l.travamentoResponsabilidade,
+          proximoBump: proximoBump(l.estado),
         })),
     }))
     .filter((etapa) => etapa.cards.length > 0);

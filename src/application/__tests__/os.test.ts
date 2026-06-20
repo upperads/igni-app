@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { abrirOS, type AbrirOSInput, type SessaoTenant } from "@/application/abrir-os";
-import { executarTransicao } from "@/application/executar-transicao";
+import { executarTransicao, recallTransicao } from "@/application/executar-transicao";
 import type { ContextoTransicao, EstadoOS } from "@/domain/os/estado";
 import { OsNaoEncontradaError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
@@ -123,5 +123,32 @@ describe("abrir OS e transições (US-04 / US-05)", () => {
     await expect(
       avancar("11111111-1111-4111-8111-111111111111", "diagnostico"),
     ).rejects.toBeInstanceOf(OsNaoEncontradaError);
+  });
+
+  it("recall desfaz a última transição e grava o EVENTO do desfazer (US-10)", async () => {
+    const { osId } = await abrirOS(database, sessao, INPUT);
+    await avancar(osId, "diagnostico");
+    await avancar(osId, "orcamento");
+
+    const r = await recallTransicao(database, sessao, osId);
+    expect(r.ok).toBe(true);
+    expect(r.estado).toBe("diagnostico");
+
+    const [ordem] = await database.db.select().from(os).where(eq(os.id, osId));
+    expect(ordem?.estado).toBe("diagnostico");
+
+    const eventos = await database.db.select().from(evento).where(eq(evento.osId, osId));
+    // abertura + 2 transições + 1 recall
+    expect(eventos).toHaveLength(4);
+    const recall = eventos.find((e) => e.motivo === "Recall (desfazer)");
+    expect(recall?.deEstado).toBe("orcamento");
+    expect(recall?.paraEstado).toBe("diagnostico");
+  });
+
+  it("recall não desfaz a abertura da OS", async () => {
+    const { osId } = await abrirOS(database, sessao, INPUT);
+    const r = await recallTransicao(database, sessao, osId);
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toMatch(/abertura/i);
   });
 });

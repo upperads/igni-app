@@ -16,6 +16,7 @@ import {
   abrirOsNoTenant,
   ajustarPrioridadeNoTenant,
   destravarNoTenant,
+  recallNoTenant,
   transicionarNoTenant,
   travarNoTenant,
 } from "@/infra/composition/os";
@@ -123,6 +124,23 @@ export async function acaoTransicionar(
     return { ok: r.ok, motivo: r.motivo };
   } catch {
     return { ok: false, motivo: "Não foi possível avançar a OS. Tente novamente." };
+  }
+}
+
+/** US-10 — recall: desfaz a última transição da OS. */
+export async function acaoRecall(osId: string): Promise<ResultadoAcao> {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  }
+  try {
+    const r = await recallNoTenant(sessao, osId);
+    if (r.ok) {
+      revalidarOs(osId);
+    }
+    return { ok: r.ok, motivo: r.motivo };
+  } catch {
+    return { ok: false, motivo: "Não foi possível desfazer. Tente novamente." };
   }
 }
 
