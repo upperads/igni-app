@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CardPainelBump } from "@/app/_components/card-painel-bump";
+import { RealtimePainel } from "@/app/_components/realtime-painel";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
@@ -40,9 +41,12 @@ export default async function Home() {
             A oficina inteira de relance, em tempo real. O atraso é a manchete.
           </p>
         </div>
-        <Link href="/painel/tv">
-          <Button variante="fantasma">Modo TV</Button>
-        </Link>
+        <div className="flex items-center gap-4">
+          <RealtimePainel tenantId={sessao.tenantId} />
+          <Link href="/painel/tv">
+            <Button variante="fantasma">Modo TV</Button>
+          </Link>
+        </div>
       </div>
 
       <section aria-label="Indicadores de gestão" className="grid grid-cols-2 gap-3 sm:grid-cols-4">

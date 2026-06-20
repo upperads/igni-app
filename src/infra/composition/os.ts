@@ -30,6 +30,7 @@ import {
 } from "@/domain/os/triagem";
 import { database } from "@/infra/db/client";
 import { cliente, entrada, equipamento, evento, os, usuario } from "@/infra/db/schema";
+import { notificarPainel } from "@/infra/realtime/notificar";
 
 /** Composição da OS: liga os casos de uso + as queries de leitura ao tenant corrente (withTenant). */
 
@@ -39,6 +40,7 @@ export async function abrirOsNoTenant(
 ): Promise<AbrirOSResult> {
   const r = await abrirOS(database, sessao, input);
   await recalcularPrioridade(database, sessao, r.osId);
+  await notificarPainel(sessao.tenantId);
   return r;
 }
 
@@ -50,6 +52,7 @@ export async function transicionarNoTenant(
   // Mudar de estado muda o "trabalho restante" → a prioridade pode mudar. Mantém o board honesto.
   if (r.ok) {
     await recalcularPrioridade(database, sessao, input.osId);
+    await notificarPainel(sessao.tenantId);
   }
   return r;
 }
@@ -61,23 +64,28 @@ export async function recallNoTenant(
   const r = await recallTransicao(database, sessao, osId);
   if (r.ok) {
     await recalcularPrioridade(database, sessao, osId);
+    await notificarPainel(sessao.tenantId);
   }
   return r;
 }
 
-export function ajustarPrioridadeNoTenant(
+export async function ajustarPrioridadeNoTenant(
   sessao: SessaoTenant,
   input: AjustarPrioridadeInput,
 ): Promise<ResultadoPrioridade> {
-  return ajustarPrioridade(database, sessao, input);
+  const r = await ajustarPrioridade(database, sessao, input);
+  await notificarPainel(sessao.tenantId);
+  return r;
 }
 
-export function travarNoTenant(sessao: SessaoTenant, input: TravarInput): Promise<void> {
-  return travar(database, sessao, input);
+export async function travarNoTenant(sessao: SessaoTenant, input: TravarInput): Promise<void> {
+  await travar(database, sessao, input);
+  await notificarPainel(sessao.tenantId);
 }
 
-export function destravarNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
-  return destravar(database, sessao, osId);
+export async function destravarNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
+  await destravar(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
 }
 
 export interface ItemListaOs {

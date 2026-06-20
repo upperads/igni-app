@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { RealtimePainel } from "@/app/_components/realtime-painel";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarPainel } from "@/infra/composition/os";
 import { OsCard } from "@/ui/components/os-card";
@@ -39,6 +40,7 @@ export default async function PainelTvPage() {
               {kpis.atraso.total} atraso
             </span>
           </span>
+          <RealtimePainel tenantId={sessao.tenantId} />
           <Relogio className="font-mono text-2xl tabular-nums text-aco-100" />
           <Link href="/" className="font-mono text-xs text-aco-400 hover:text-aco-100">
             sair
