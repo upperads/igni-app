@@ -43,3 +43,18 @@ export const prioridadeOs = pgEnum("prioridade_os", ["critica", "alta", "normal"
 
 /** Responsabilidade do travamento (M3 / RN-03): de quem é a bola enquanto a OS está travada. */
 export const responsabilidade = pgEnum("responsabilidade", ["empresa", "cliente"]);
+
+/** Status do orçamento (M5 / US-12). Espelha `STATUS_ORCAMENTO` do domínio (teste de drift). */
+export const statusOrcamento = pgEnum("status_orcamento", [
+  "rascunho",
+  "enviado",
+  "aprovado",
+  "recusado",
+]);
+
+/** Tipo de item do orçamento (M5): peça, mão de obra ou serviço de terceiro (com markup %). */
+export const tipoItemOrcamento = pgEnum("tipo_item_orcamento", [
+  "peca",
+  "mao_de_obra",
+  "terceiro",
+]);

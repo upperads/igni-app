@@ -47,7 +47,12 @@ export async function executarTransicao(
 
     await tx
       .update(os)
-      .set({ estado: input.para, entrouNoEstadoEm: new Date() })
+      .set({
+        estado: input.para,
+        entrouNoEstadoEm: new Date(),
+        // Reentrar no CQ (retrabalho) zera a aprovação: cada rodada do CQ aprova de novo.
+        ...(input.para === "controle_qualidade" ? { cqAprovado: false } : {}),
+      })
       .where(eq(os.id, input.osId));
 
     await tx.insert(evento).values({

@@ -71,6 +71,20 @@
       "when": 1781918384591,
       "tag": "0009_rls_ajuste_prioridade",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781966394292,
+      "tag": "0010_wealthy_steel_serpent",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781967278381,
+      "tag": "0011_rls_orcamento",
+      "breakpoints": true
     }
   ]
 }

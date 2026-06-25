@@ -13,3 +13,5 @@ export * from "./entrada";
 export * from "./os";
 export * from "./evento";
 export * from "./ajuste-prioridade";
+export * from "./orcamento";
+export * from "./orcamento-item";
