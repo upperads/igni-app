@@ -8,12 +8,12 @@ const NAV = [
   { href: "/", rotulo: "Painel" },
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/os", rotulo: "OS" },
-  { href: "/cadastros", rotulo: "Cadastros" },
+  { href: "/painel/tv", rotulo: "Modo TV" },
   { href: "/primeiros-passos", rotulo: "Primeiros passos" },
 ] as const;
 
-// Na barra inferior (mobile) ficam só as 4 ações de chão; o guia chega pelo card na Home.
-const NAV_MOBILE = NAV.slice(0, 4);
+// Na barra inferior (mobile, zona do polegar) ficam as telas de chão; o Modo TV é de parede e sai daqui.
+const NAV_MOBILE = NAV.filter((n) => n.href !== "/painel/tv");
 
 interface Props {
   children: ReactNode;

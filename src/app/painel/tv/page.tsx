@@ -29,7 +29,7 @@ export default async function PainelTvPage() {
       <header className="flex items-center justify-between gap-4 border-b border-grafite-700 px-6 py-4">
         <div className="flex items-baseline gap-4">
           <span className="font-display text-2xl font-bold tracking-tight text-ambar-500">IGNI</span>
-          <span className="hidden font-mono text-sm uppercase tracking-widest text-aco-400 sm:inline">
+          <span className="hidden font-mono text-sm uppercase tracking-widest text-aco-300 sm:inline">
             Painel da oficina
           </span>
         </div>
@@ -51,7 +51,7 @@ export default async function PainelTvPage() {
       <main className="flex-1 px-6 py-6">
         {etapas.length === 0 ? (
           <div className="grid h-full place-items-center">
-            <p className="font-display text-2xl text-aco-400">Nenhum serviço na oficina agora.</p>
+            <p className="font-display text-2xl text-aco-300">Nenhum serviço na oficina agora.</p>
           </div>
         ) : (
           <div className="flex flex-col gap-8">

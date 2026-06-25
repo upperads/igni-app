@@ -7,10 +7,10 @@ import {
 } from "@/application/abrir-os";
 import {
   executarTransicao,
-  type ExecutarTransicaoInput,
   recallTransicao,
   type ResultadoExecucao,
 } from "@/application/executar-transicao";
+import { resolverContextoGate } from "@/application/orcamento";
 import {
   ajustarPrioridade,
   type AjustarPrioridadeInput,
@@ -44,11 +44,24 @@ export async function abrirOsNoTenant(
   return r;
 }
 
+export interface TransicaoInput {
+  osId: string;
+  para: EstadoOS;
+  motivo?: string;
+}
+
 export async function transicionarNoTenant(
   sessao: SessaoTenant,
-  input: ExecutarTransicaoInput,
+  input: TransicaoInput,
 ): Promise<ResultadoExecucao> {
-  const r = await executarTransicao(database, sessao, input);
+  // Gate REAL (ADR-008): o contexto vem do dado (orçamento aprovado + CQ aprovado), não cravado.
+  const contexto = await resolverContextoGate(database, sessao, input.osId);
+  const r = await executarTransicao(database, sessao, {
+    osId: input.osId,
+    para: input.para,
+    contexto,
+    motivo: input.motivo,
+  });
   // Mudar de estado muda o "trabalho restante" → a prioridade pode mudar. Mantém o board honesto.
   if (r.ok) {
     await recalcularPrioridade(database, sessao, input.osId);

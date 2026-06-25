@@ -16,6 +16,8 @@
   /* Aço — texto */
   --color-aco-100: #e8ebf1;
   --color-aco-200: #c7ccd6;
+  /* aco-300: secundário legível (AA) sobre grafite e à distância na TV; um degrau acima do 400. */
+  --color-aco-300: #a7adb8;
   --color-aco-400: #8b919e;
 
   /* Âmbar — marca + sinalização estrutural (risco/foco/ativo). Nunca status. */

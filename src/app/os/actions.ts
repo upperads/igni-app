@@ -97,9 +97,9 @@ export interface ResultadoAcao {
 }
 
 /**
- * US-05 — move a OS para o próximo estado. O contexto dos gates (orçamento/CQ) ainda não existe
- * (M5); por ora vai vazio, então execução e "pronta" ficam barradas com o motivo do gate — que é
- * exatamente a regra de ouro em ação. M5 liga o contexto real.
+ * US-05 — move a OS para o próximo estado. O contexto dos gates (orçamento aprovado / CQ aprovado)
+ * é resolvido do DADO real pela composição (`resolverContextoGate`): sem orçamento aprovado, a
+ * execução barra com o motivo; sem CQ aprovado, "pronta" barra. A regra de ouro lendo a verdade.
  */
 export async function acaoTransicionar(
   osId: string,
@@ -112,12 +112,7 @@ export async function acaoTransicionar(
   }
 
   try {
-    const r = await transicionarNoTenant(sessao, {
-      osId,
-      para,
-      contexto: { orcamentoAprovado: false, cqAprovado: false },
-      motivo,
-    });
+    const r = await transicionarNoTenant(sessao, { osId, para, motivo });
     if (r.ok) {
       revalidarOs(osId);
     }
