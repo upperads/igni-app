@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { pode } from "@/domain/auth/rbac";
 import { proximosEstados, quatroPerguntas, rotuloEstado } from "@/domain/os/estado";
 import { sessaoAtual } from "@/infra/auth/sessao";
-import { detalheOs } from "@/infra/composition/os";
+import { detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { EstadoBadge } from "@/ui/components/estado-badge";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
 import { RESPONSABILIDADE_ROTULO, TravamentoSelo } from "@/ui/components/travamento-selo";
 import { AcoesOs } from "./acoes";
+import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
 
 const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
@@ -30,6 +32,8 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
+  const orcamento = await orcamentoDaOs(sessao, id);
+  const podeEditarOrcamento = pode(sessao.papel, "orcamento:editar");
   const perguntas = quatroPerguntas(os.estado);
   const proximos = proximosEstados(os.estado);
 
@@ -88,6 +92,18 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
           osId={os.id}
           proximos={proximos}
           podeRecall={os.eventos.length > 0 && os.eventos[0]!.deEstado !== null}
+          precisaAprovarCq={os.estado === "controle_qualidade" && !os.cqAprovado}
+        />
+      </section>
+
+      <section className="mt-8" aria-label="Orçamento">
+        <h2 className="mb-3 font-display text-xl text-aco-100">Orçamento</h2>
+        <Orcamento
+          osId={os.id}
+          estado={os.estado}
+          cqAprovado={os.cqAprovado}
+          orcamento={orcamento}
+          podeEditar={podeEditarOrcamento}
         />
       </section>
 

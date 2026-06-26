@@ -4,20 +4,23 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { type EstadoOS, rotuloEstado } from "@/domain/os/estado";
 import { Button } from "@/ui/components/button";
-import { acaoRecall, acaoTransicionar } from "../actions";
+import { acaoAprovarCq, acaoRecall, acaoTransicionar } from "../actions";
 
 /**
  * Ações de avanço da OS: o "bump" (único passo adiante) vira botão primário; estados que ramificam
- * mostram as opções; e o recall desfaz a última transição. Gate barrado mostra o motivo.
+ * mostram as opções; e o recall desfaz a última transição. Gate barrado mostra o motivo. No CQ,
+ * "Aprovar CQ" libera o gate controle_qualidade → pronta.
  */
 export function AcoesOs({
   osId,
   proximos,
   podeRecall,
+  precisaAprovarCq,
 }: {
   osId: string;
   proximos: readonly EstadoOS[];
   podeRecall: boolean;
+  precisaAprovarCq: boolean;
 }) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
@@ -39,6 +42,16 @@ export function AcoesOs({
 
   return (
     <div className="flex flex-col gap-3">
+      {precisaAprovarCq ? (
+        <div className="rounded-md border border-grafite-700 bg-grafite-800 p-3">
+          <p className="mb-2 font-body text-sm text-aco-300">
+            O controle de qualidade precisa ser aprovado antes de marcar a OS como pronta.
+          </p>
+          <Button disabled={pendente} onClick={() => rodar(() => acaoAprovarCq(osId))}>
+            Aprovar CQ
+          </Button>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         {bump ? (
           <Button disabled={pendente} onClick={() => rodar(() => acaoTransicionar(osId, bump))}>

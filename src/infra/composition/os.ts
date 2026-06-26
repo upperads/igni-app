@@ -10,7 +10,16 @@ import {
   recallTransicao,
   type ResultadoExecucao,
 } from "@/application/executar-transicao";
-import { resolverContextoGate } from "@/application/orcamento";
+import {
+  aprovarCq,
+  aprovarOrcamento,
+  enviarOrcamento,
+  type ItemEntrada,
+  montarOrcamento,
+  recusarOrcamento,
+  reabrirOrcamento,
+  resolverContextoGate,
+} from "@/application/orcamento";
 import {
   ajustarPrioridade,
   type AjustarPrioridadeInput,
@@ -28,8 +37,23 @@ import {
   type Prioridade,
   type Responsabilidade,
 } from "@/domain/os/triagem";
+import {
+  type StatusOrcamento,
+  type TipoItem,
+  calcularOrcamento,
+  totalItem,
+} from "@/domain/orcamento/orcamento";
 import { database } from "@/infra/db/client";
-import { cliente, entrada, equipamento, evento, os, usuario } from "@/infra/db/schema";
+import {
+  cliente,
+  entrada,
+  equipamento,
+  evento,
+  orcamento,
+  orcamentoItem,
+  os,
+  usuario,
+} from "@/infra/db/schema";
 import { notificarPainel } from "@/infra/realtime/notificar";
 
 /** Composição da OS: liga os casos de uso + as queries de leitura ao tenant corrente (withTenant). */
@@ -99,6 +123,107 @@ export async function travarNoTenant(sessao: SessaoTenant, input: TravarInput): 
 export async function destravarNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
   await destravar(database, sessao, osId);
   await notificarPainel(sessao.tenantId);
+}
+
+// --- Orçamento (M5) — wrappers que injetam `database` + notificam o painel ---
+
+export async function montarOrcamentoNoTenant(
+  sessao: SessaoTenant,
+  input: { osId: string; itens: ItemEntrada[] },
+): Promise<void> {
+  await montarOrcamento(database, sessao, input);
+  await notificarPainel(sessao.tenantId);
+}
+
+export async function enviarOrcamentoNoTenant(
+  sessao: SessaoTenant,
+  osId: string,
+): Promise<{ token: string }> {
+  const r = await enviarOrcamento(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
+  return r;
+}
+
+export async function aprovarOrcamentoNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
+  await aprovarOrcamento(database, sessao, osId);
+  await recalcularPrioridade(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
+}
+
+export async function recusarOrcamentoNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
+  await recusarOrcamento(database, sessao, osId);
+  await recalcularPrioridade(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
+}
+
+export async function reabrirOrcamentoNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
+  await reabrirOrcamento(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
+}
+
+export async function aprovarCqNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
+  await aprovarCq(database, sessao, osId);
+  await notificarPainel(sessao.tenantId);
+}
+
+export interface ItemOrcamentoView {
+  id: string;
+  tipo: TipoItem;
+  descricao: string;
+  valorCentavos: number;
+  markupPct: number;
+  totalCentavos: number;
+}
+
+export interface OrcamentoView {
+  id: string;
+  status: StatusOrcamento;
+  itens: ItemOrcamentoView[];
+  totais: { porTipo: Record<TipoItem, number>; total: number };
+  enviadoEm: Date | null;
+  aprovadoEm: Date | null;
+}
+
+/** Leitura do orçamento da OS (status + itens + totais). Null se ainda não há orçamento. */
+export async function orcamentoDaOs(
+  sessao: SessaoTenant,
+  osId: string,
+): Promise<OrcamentoView | null> {
+  return database.withTenant(sessao.tenantId, async (tx) => {
+    const [orc] = await tx
+      .select({
+        id: orcamento.id,
+        status: orcamento.status,
+        enviadoEm: orcamento.enviadoEm,
+        aprovadoEm: orcamento.aprovadoEm,
+      })
+      .from(orcamento)
+      .where(eq(orcamento.osId, osId))
+      .limit(1);
+    if (!orc) {
+      return null;
+    }
+    const itens = await tx
+      .select({
+        id: orcamentoItem.id,
+        tipo: orcamentoItem.tipo,
+        descricao: orcamentoItem.descricao,
+        valorCentavos: orcamentoItem.valorCentavos,
+        markupPct: orcamentoItem.markupPct,
+      })
+      .from(orcamentoItem)
+      .where(eq(orcamentoItem.orcamentoId, orc.id))
+      .orderBy(orcamentoItem.createdAt);
+
+    return {
+      id: orc.id,
+      status: orc.status,
+      enviadoEm: orc.enviadoEm,
+      aprovadoEm: orc.aprovadoEm,
+      itens: itens.map((i) => ({ ...i, totalCentavos: totalItem(i) })),
+      totais: calcularOrcamento(itens),
+    };
+  });
 }
 
 export interface ItemListaOs {
@@ -297,6 +422,7 @@ export interface DetalheOs {
   travado: boolean;
   travamentoMotivo: string | null;
   travamentoResponsabilidade: Responsabilidade | null;
+  cqAprovado: boolean;
   equipamento: { tipo: string; placa: string | null; chassi: string | null; modeloMotor: string | null };
   cliente: { nome: string; tipo: string };
   eventos: EventoOs[];
@@ -317,6 +443,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
         travado: os.travado,
         travamentoMotivo: os.travamentoMotivo,
         travamentoResponsabilidade: os.travamentoResponsabilidade,
+        cqAprovado: os.cqAprovado,
         equipTipo: equipamento.tipo,
         placa: equipamento.placa,
         chassi: equipamento.chassi,
@@ -358,6 +485,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
       travado: linha.travado,
       travamentoMotivo: linha.travamentoMotivo,
       travamentoResponsabilidade: linha.travamentoResponsabilidade,
+      cqAprovado: linha.cqAprovado,
       equipamento: {
         tipo: linha.equipTipo,
         placa: linha.placa,

@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { AbrirOSInput } from "@/application/abrir-os";
+import type { ItemEntrada } from "@/application/orcamento";
+import { type Acao, pode } from "@/domain/auth/rbac";
 import type { EstadoOS } from "@/domain/os/estado";
+import { type TipoItem, TIPOS_ITEM } from "@/domain/orcamento/orcamento";
 import {
   PRIORIDADES,
   type Prioridade,
@@ -11,15 +14,36 @@ import {
   type Responsabilidade,
 } from "@/domain/os/triagem";
 import { DadosInvalidosError } from "@/domain/shared/errors";
-import { sessaoAtual } from "@/infra/auth/sessao";
+import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
   abrirOsNoTenant,
   ajustarPrioridadeNoTenant,
+  aprovarCqNoTenant,
+  aprovarOrcamentoNoTenant,
   destravarNoTenant,
+  enviarOrcamentoNoTenant,
+  montarOrcamentoNoTenant,
+  reabrirOrcamentoNoTenant,
   recallNoTenant,
+  recusarOrcamentoNoTenant,
   transicionarNoTenant,
   travarNoTenant,
 } from "@/infra/composition/os";
+
+/**
+ * Autorização no BOUNDARY (RNF-SEC-02): resolve a sessão e CHECA o papel antes de qualquer mutação.
+ * É a checagem que vale (o servidor), não só o read-only da UI. Retorna a sessão ou o motivo do erro.
+ */
+async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
+  const sessao = await sessaoAtual();
+  if (!sessao) {
+    return { erro: "Sua sessão expirou. Entre novamente." };
+  }
+  if (!pode(sessao.papel, acao)) {
+    return { erro: "Você não tem permissão para essa ação." };
+  }
+  return { sessao };
+}
 
 /** Revalida as telas que mostram prioridade/travamento de uma OS. */
 function revalidarOs(osId: string): void {
@@ -48,10 +72,11 @@ export async function acaoAbrirOs(
   _anterior: EstadoAbrirOs,
   formData: FormData,
 ): Promise<EstadoAbrirOs> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { erro: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("os:abrir");
+  if ("erro" in auth) {
+    return { erro: auth.erro };
   }
+  const { sessao } = auth;
 
   const tipoCliente = String(formData.get("tipoCliente") ?? "");
   const modalidade = String(formData.get("modalidade") ?? "");
@@ -106,10 +131,11 @@ export async function acaoTransicionar(
   para: EstadoOS,
   motivo?: string,
 ): Promise<ResultadoAcao> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("os:avancar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
   }
+  const { sessao } = auth;
 
   try {
     const r = await transicionarNoTenant(sessao, { osId, para, motivo });
@@ -124,10 +150,11 @@ export async function acaoTransicionar(
 
 /** US-10 — recall: desfaz a última transição da OS. */
 export async function acaoRecall(osId: string): Promise<ResultadoAcao> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("os:avancar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
   }
+  const { sessao } = auth;
   try {
     const r = await recallNoTenant(sessao, osId);
     if (r.ok) {
@@ -145,10 +172,11 @@ export async function acaoTravar(
   motivo: string,
   responsabilidade: string,
 ): Promise<ResultadoAcao> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("os:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
   }
+  const { sessao } = auth;
   if (!RESPONSABILIDADES.includes(responsabilidade as Responsabilidade)) {
     return { ok: false, motivo: "Selecione de quem é a responsabilidade." };
   }
@@ -171,10 +199,11 @@ export async function acaoTravar(
 
 /** US-08 — destrava a OS. */
 export async function acaoDestravar(osId: string): Promise<ResultadoAcao> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("os:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
   }
+  const { sessao } = auth;
   try {
     await destravarNoTenant(sessao, osId);
     revalidarOs(osId);
@@ -190,10 +219,11 @@ export async function acaoAjustarPrioridade(
   prioridade: string,
   motivo: string,
 ): Promise<ResultadoAcao> {
-  const sessao = await sessaoAtual();
-  if (!sessao) {
-    return { ok: false, motivo: "Sua sessão expirou. Entre novamente." };
+  const auth = await autorizar("triagem:override");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
   }
+  const { sessao } = auth;
   if (!PRIORIDADES.includes(prioridade as Prioridade)) {
     return { ok: false, motivo: "Selecione uma prioridade válida." };
   }
@@ -207,5 +237,153 @@ export async function acaoAjustarPrioridade(
     return { ok: true };
   } catch {
     return { ok: false, motivo: "Não foi possível ajustar a prioridade. Tente novamente." };
+  }
+}
+
+// --- Orçamento (M5 / US-12) — RBAC: dono/gestor/recepção editam; produção só lê ---
+
+/** Converte reais ("150" / "150,50" / "150.50") em centavos inteiros. Sem separador de milhar. */
+function reaisParaCentavos(bruto: string): number | null {
+  const v = bruto.trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(v)) {
+    return null;
+  }
+  return Math.round(Number.parseFloat(v) * 100);
+}
+
+export interface ItemFormulario {
+  tipo: string;
+  descricao: string;
+  valor: string;
+  markup: string;
+}
+
+/** US-12 — monta/edita os itens do orçamento (substitui a lista). */
+export async function acaoMontarOrcamento(
+  osId: string,
+  itensForm: ItemFormulario[],
+): Promise<ResultadoAcao> {
+  const auth = await autorizar("orcamento:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  const itens: ItemEntrada[] = [];
+  for (const f of itensForm) {
+    if (!TIPOS_ITEM.includes(f.tipo as TipoItem)) {
+      return { ok: false, motivo: "Item com tipo inválido." };
+    }
+    if (!f.descricao.trim()) {
+      return { ok: false, motivo: "Todo item precisa de descrição." };
+    }
+    const valorCentavos = reaisParaCentavos(f.valor);
+    if (valorCentavos === null) {
+      return { ok: false, motivo: `Valor inválido em "${f.descricao.trim()}".` };
+    }
+    const markup = f.markup.trim() === "" ? 0 : Number.parseInt(f.markup, 10);
+    if (!Number.isInteger(markup) || markup < 0) {
+      return { ok: false, motivo: "Markup inválido (use um percentual inteiro)." };
+    }
+    itens.push({ tipo: f.tipo as TipoItem, descricao: f.descricao, valorCentavos, markupPct: markup });
+  }
+
+  try {
+    await montarOrcamentoNoTenant(auth.sessao, { osId, itens });
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível salvar o orçamento. Tente novamente." };
+  }
+}
+
+export interface ResultadoEnvio {
+  ok: boolean;
+  motivo?: string;
+  token?: string;
+}
+
+/** US-12 — envia o orçamento ao cliente (gera o link com token). */
+export async function acaoEnviarOrcamento(osId: string): Promise<ResultadoEnvio> {
+  const auth = await autorizar("orcamento:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    const { token } = await enviarOrcamentoNoTenant(auth.sessao, osId);
+    revalidarOs(osId);
+    return { ok: true, token };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível enviar o orçamento. Tente novamente." };
+  }
+}
+
+async function decidirOrcamento(
+  osId: string,
+  decidir: (sessao: SessaoUsuario) => Promise<void>,
+  falha: string,
+): Promise<ResultadoAcao> {
+  const auth = await autorizar("orcamento:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await decidir(auth.sessao);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: falha };
+  }
+}
+
+/** US-12/14 — aprovação interna (cliente aprovou por telefone). Libera o gate de execução. */
+export async function acaoAprovarOrcamento(osId: string): Promise<ResultadoAcao> {
+  return decidirOrcamento(
+    osId,
+    (s) => aprovarOrcamentoNoTenant(s, osId),
+    "Não foi possível aprovar o orçamento.",
+  );
+}
+
+/** US-14 — recusa interna: volta a OS a diagnóstico. */
+export async function acaoRecusarOrcamento(osId: string): Promise<ResultadoAcao> {
+  return decidirOrcamento(
+    osId,
+    (s) => recusarOrcamentoNoTenant(s, osId),
+    "Não foi possível recusar o orçamento.",
+  );
+}
+
+/** US-12 — reabre um orçamento recusado para renegociar. */
+export async function acaoReabrirOrcamento(osId: string): Promise<ResultadoAcao> {
+  return decidirOrcamento(
+    osId,
+    (s) => reabrirOrcamentoNoTenant(s, osId),
+    "Não foi possível reabrir o orçamento.",
+  );
+}
+
+/** US-12 (gate CQ) — aprova o controle de qualidade. Produção pode (é ação de chão). */
+export async function acaoAprovarCq(osId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("os:avancar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await aprovarCqNoTenant(auth.sessao, osId);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível aprovar o CQ. Tente novamente." };
   }
 }
