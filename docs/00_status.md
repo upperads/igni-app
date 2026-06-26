@@ -1,9 +1,9 @@
 # Status — PRONTO (codinome; marca a definir)
 
 - **Modo**: greenfield
-- **Fase atual**: **Execução em andamento.** Inception completa. Auth (Wave 3), M2 (OS), M3 (Triagem) e **M4 (Painel & Realtime) CONCLUÍDOS**: painel real (`/`) + modo TV (`/painel/tv`) com KPIs (atraso separando a culpa), **bump** (alvo grande) + **recall**, e **Supabase Realtime** (broadcast por tenant + refetch, ADR-010, propagação < 2s). App no ar no Railway (ADR-007).
-- **Aprovado até**: Fases 1–3; ADR-004/005/006/007/008/009/010; visual da Wave 3d aprovado; Checkpoints 1, 2, 3a, 3b, 3c aprovados; M2, M3 e M4 aprovados.
-- **Próximo passo**: **M5 — Orçamento & Aprovação** (US-12/13/14): montar orçamento (peças + mão de obra), enviar por link, cliente aprova/recusa sem login. **Aqui os gates de orçamento/CQ ganham contexto real** (hoje barram com `orcamentoAprovado:false`). Portal do cliente em tema claro.
+- **Fase atual**: **Execução em andamento.** Auth + M2 + M3 + M4 concluídos. **M5 (Orçamento) FUNCIONAL NO AR** (interno): **gate real ligado** (`resolverContextoGate` — execução exige orçamento aprovado; pronta exige CQ aprovado), UI de orçamento no detalhe (builder de itens peça/mão de obra/terceiro + markup, enviar com token, aprovar/recusar/reabrir internos, aprovar CQ), e **RBAC aplicado no boundary** (produção não edita orçamento). O **ciclo da OS agora fecha de ponta a ponta**. Falta o **M6 portal do cliente** (cliente aprova/recusa pelo link). App no ar no Railway (ADR-007).
+- **Aprovado até**: Fases 1–3; ADR-004/005/006/007/008/009/010/011/012; M2, M3, M4 aprovados; M5 (interno) no ar.
+- **Próximo passo**: antes do **M6 portal** (ADR-012: token escopo mínimo + rate-limit + máscara LGPD de chassi; tema claro), pagar 3 itens de craft que o portal vai herdar: **migrar tokens para OKLCH** (grafite quente de verdade, CR-1), **decidir a assinatura** (elevar a espinha de status acima do side-stripe genérico), e **tornar a responsabilização proeminente** (o pilar, hoje tímido). Cadeia de produto documentada em `/docs/05`–`/docs/10` + `ARQUITETURA_TECNICA`/`SECURITY_AUDIT_DOSSIE`/`UX_AUDIT_DOSSIE_V1/V2`/`IMPECCABLE_FRONTEND`.
 - **Ops / Infra (ADR-007)**:
   - **🚀 App em produção**: **https://igni-app-production.up.railway.app** — 1º deploy via Railway CLI (`railway up`) **concluído e no ar** (19/06). Smoke test (curl): `/login` → 200; `/` → 307 p/ `/login` (middleware protege em prod). Secrets do cloud setados no serviço. Build pinado a `pnpm@10.33.0` + Node ≥20 (a versão de pnpm do Railpack exigia `packages` no workspace; o pin resolveu).
   - **CI**: GitHub Actions no ar e **verde** (build/lint/typecheck/test + checagem de migrations). `main` em `upperads/igni-app`.
@@ -52,7 +52,14 @@
   - Uptime alvo — a definir
   - Validar contraste da paleta de sinal sobre grafite (WCAG) na implementação
   - Fornecedores: **resolvido** — Supabase (Postgres+RLS+Auth+Realtime, ADR-004) + Drizzle (ADR-005). **WhatsApp** ainda em aberto → decide no M7.
-- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), 008 (máquina de estados da OS), 009 (triagem: razão crítica + travamento), **010 (realtime do painel via broadcast)** — em `/docs/adr/`
+- **ADRs registrados**: 001 (Postgres+RLS), 002 (painel realtime), 003 (MVP full-stack Next), 004 (plataforma Supabase), 005 (Drizzle/RLS), 006 (auth), 007 (deploy Railway + CI + Supabase cloud), 008 (máquina de estados da OS), 009 (triagem: razão crítica + travamento), 010 (realtime do painel via broadcast), **011 (número sequencial de OS por tenant)**, **012 (portal público do cliente por token)** — em `/docs/adr/`
 - **Housekeeping 16/06**: removidas 4 cópias duplicadas de `00_status`; ADRs movidos de `/docs/` para `/docs/adr/`
 - **devdead-audit**: roda na validação/implementação (ainda não há código)
-- **Última atualização**: 20/06
+- **M5 (Orçamento & gates reais)** ✅ *interno no ar* — 2 fatias.
+  - ✅ *Backend*: schema `orcamento`/`orcamento_item` (centavos inteiros, markup %, token hash+expiração, `UNIQUE` por OS) + RLS (migrations 0010/0011); `os.cq_aprovado`; domínio (status + totais) e casos de uso (`montar`/`enviar`/`aprovar`/`recusar`/`reabrir`/`aprovarCq`/`resolverContextoGate`); reset do CQ ao reentrar. 15 testes.
+  - ✅ *Gate real ligado*: `transicionarNoTenant` resolve o contexto do dado (orçamento aprovado + CQ) — execução/pronta deixam de barrar para sempre; o ciclo flui. Commit `dbe5c3c`.
+  - ✅ *UI*: seção Orçamento no detalhe (builder de itens + totais + enviar com link/token + aprovar/recusar/reabrir internos), Aprovar CQ no "Próximo passo". Commit `22bfc21`.
+  - ✅ *RBAC no boundary* (corrige o gap de segurança A-1/review #2): toda server action de mutação chama `autorizar(acao)` antes; produção não edita orçamento.
+  - ✅ *Polimento F3 (fatia 1)*: link morto `/cadastros` removido + Modo TV no shell; token `aco-300` (contraste); `error.tsx` + `loading.tsx` (skeletons) em os/detalhe/triagem. **103 testes no total.** CI verde (`22bfc21`), cloud migrado (0010/0011 verificado), deploy + smoke OK.
+  - *Falta do M5/M6*: **portal do cliente** (cliente aprova/recusa pelo link sozinho) — é o M6; hoje a aprovação é interna (operador).
+- **Última atualização**: 25/06
