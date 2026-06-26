@@ -5,6 +5,7 @@ import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { Button } from "@/ui/components/button";
+import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
 import { EstadoBadge } from "@/ui/components/estado-badge";
 
 export const metadata: Metadata = {
@@ -23,20 +24,16 @@ export default async function OsPage() {
 
   return (
     <AppShell>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-aco-100">
-            Ordens de serviço
-          </h1>
-          <p className="mt-1 max-w-prose font-body text-sm text-aco-400">
-            Cada OS é rastreável da entrada à entrega. Abra uma nova ou acompanhe as que já estão na
-            casa.
-          </p>
-        </div>
-        <Link href="/os/nova">
-          <Button>Nova OS</Button>
-        </Link>
-      </div>
+      <CabecalhoTela
+        etiqueta="Oficina"
+        titulo="Ordens de serviço"
+        sub="Cada OS é rastreável da entrada à entrega. Abra uma nova ou acompanhe as que já estão na casa."
+        acao={
+          <Link href="/os/nova">
+            <Button>Nova OS</Button>
+          </Link>
+        }
+      />
 
       {lista.length === 0 ? (
         <div className="rounded-lg border border-dashed border-grafite-600 bg-grafite-850 px-6 py-12 text-center">

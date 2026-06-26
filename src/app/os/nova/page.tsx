@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { AppShell } from "@/ui/components/app-shell";
+import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
 import { FormAbrirOs } from "./form";
 
 export const metadata: Metadata = {
@@ -23,13 +24,11 @@ export default async function NovaOsPage() {
         </Link>
       </div>
 
-      <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-aco-100">Abrir OS</h1>
-        <p className="mt-1 max-w-prose font-body text-sm text-aco-400">
-          Registre quem trouxe, o quê e como entrou. A OS nasce no estado{" "}
-          <span className="text-aco-200">Aberta</span> e segue daqui pela linha de produção.
-        </p>
-      </div>
+      <CabecalhoTela
+        etiqueta="Recepção"
+        titulo="Abrir OS"
+        sub="Registre quem trouxe, o quê e como entrou. A OS nasce no estado Aberta e segue daqui pela linha de produção."
+      />
 
       <div className="max-w-2xl">
         <FormAbrirOs />

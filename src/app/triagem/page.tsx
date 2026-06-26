@@ -5,6 +5,7 @@ import { rotuloEstado } from "@/domain/os/estado";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarTriagem } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
+import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
 import { TravamentoSelo } from "@/ui/components/travamento-selo";
 
@@ -23,13 +24,11 @@ export default async function TriagemPage() {
 
   return (
     <AppShell alarme={temCritica}>
-      <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-aco-100">Triagem</h1>
-        <p className="mt-1 max-w-prose font-body text-sm text-aco-400">
-          A fila ordenada por impacto: prazo contra trabalho restante, mais os gatilhos do seu ramo.
-          Quem está travado por causa do cliente cede a vez; por causa da oficina, mantém.
-        </p>
-      </div>
+      <CabecalhoTela
+        etiqueta="Fila"
+        titulo="Triagem"
+        sub="A fila ordenada por impacto: prazo contra trabalho restante, mais os gatilhos do seu ramo. Quem está travado por causa do cliente cede a vez; por causa da oficina, mantém."
+      />
 
       {fila.length === 0 ? (
         <div className="rounded-lg border border-dashed border-grafite-600 bg-grafite-850 px-6 py-12 text-center">

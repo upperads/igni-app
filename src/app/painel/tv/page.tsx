@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: "Painel — Igni (modo TV)",
 };
 
-/** Modo TV (US-09): board read-only, tela cheia, zero navegação. Atualização ao vivo entra no M4b (Realtime). */
+/** Modo TV (US-09): board read-only, tela cheia, zero navegação. Atualiza ao vivo (Realtime, ADR-010). */
 export default async function PainelTvPage() {
   const sessao = await sessaoAtual();
   if (!sessao) {
@@ -47,6 +47,26 @@ export default async function PainelTvPage() {
           </Link>
         </div>
       </header>
+
+      {/* Responsabilização na PAREDE: de quem é a bola do atraso, legível de longe (o diferencial). */}
+      {kpis.atraso.total > 0 ? (
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 border-b border-ambar-600/40 bg-grafite-850 px-6 py-3">
+          <span className="font-mono text-sm uppercase tracking-[0.2em] text-aco-400">
+            Atraso · de quem é a bola
+          </span>
+          <div className="flex items-center gap-7 font-mono text-2xl tabular-nums">
+            <span className="text-aco-200">
+              {kpis.atraso.nossa} <span className="text-base text-aco-400">oficina</span>
+            </span>
+            <span className="text-ambar-500">
+              {kpis.atraso.cliente} <span className="text-base text-aco-400">cliente</span>
+            </span>
+            <span className="text-sinal-laranja">
+              {kpis.atraso.peca} <span className="text-base text-aco-400">peça</span>
+            </span>
+          </div>
+        </div>
+      ) : null}
 
       <main className="flex-1 px-6 py-6">
         {etapas.length === 0 ? (
