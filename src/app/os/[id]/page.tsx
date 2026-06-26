@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pode } from "@/domain/auth/rbac";
 import { proximosEstados, quatroPerguntas, rotuloEstado } from "@/domain/os/estado";
+import { sinalDaOs } from "@/domain/os/painel";
+import { diasRestantesAte } from "@/domain/os/triagem";
 import { sessaoAtual } from "@/infra/auth/sessao";
-import { detalheOs, orcamentoDaOs } from "@/infra/composition/os";
+import { type DetalheOs, detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
-import { EstadoBadge } from "@/ui/components/estado-badge";
+import { MedidorEstado } from "@/ui/components/medidor-estado";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
-import { RESPONSABILIDADE_ROTULO, TravamentoSelo } from "@/ui/components/travamento-selo";
+import { type Bola, Responsabilizacao } from "@/ui/components/responsabilizacao";
 import { AcoesOs } from "./acoes";
 import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
@@ -19,6 +21,30 @@ const TIPO_CLIENTE_ROTULO: Record<string, string> = {
   produtor: "Produtor",
   avulso: "Avulso",
 };
+
+function prazoLabel(dias: number | null): string {
+  if (dias === null) return "sem prazo";
+  if (dias < 0) return `atrasado ${-dias}d`;
+  if (dias === 0) return "vence hoje";
+  return `faltam ${dias}d`;
+}
+
+/** De quem é a bola, na visão interna (o pilar). */
+function calcularBola(os: DetalheOs): { bola: Bola; detalhe: string } {
+  if (os.estado === "aguardando_aprovacao") {
+    return { bola: "cliente", detalhe: "Esperando o cliente aprovar o orçamento enviado." };
+  }
+  if (os.travado && os.travamentoResponsabilidade === "cliente") {
+    return { bola: "cliente", detalhe: os.travamentoMotivo ?? "Travado por uma pendência do cliente." };
+  }
+  if (os.estado === "aguardando_peca") {
+    return { bola: "peca", detalhe: "Aguardando a peça chegar para seguir." };
+  }
+  if (os.travado) {
+    return { bola: "oficina", detalhe: os.travamentoMotivo ?? "Travado, e a resolução é nossa." };
+  }
+  return { bola: "oficina", detalhe: `${quatroPerguntas(os.estado).oQueFalta}.` };
+}
 
 export default async function DetalheOsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -34,60 +60,60 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
 
   const orcamento = await orcamentoDaOs(sessao, id);
   const podeEditarOrcamento = pode(sessao.papel, "orcamento:editar");
-  const perguntas = quatroPerguntas(os.estado);
   const proximos = proximosEstados(os.estado);
+  const perguntas = quatroPerguntas(os.estado);
+  const diasRestantes = diasRestantesAte(os.prazoPrometido, new Date());
+  const sinal = sinalDaOs({ prioridade: os.prioridade, travado: os.travado, diasRestantes });
+  const { bola, detalhe } = calcularBola(os);
 
-  const cartoes: Array<{ rotulo: string; valor: string }> = [
-    { rotulo: "Onde está", valor: perguntas.onde },
-    { rotulo: "Por quê", valor: perguntas.porque },
-    { rotulo: "O que falta", valor: perguntas.oQueFalta },
-    { rotulo: "Pra onde vai", valor: perguntas.praOnde },
+  const legenda: Array<{ k: string; v: string }> = [
+    { k: "Onde está", v: perguntas.onde },
+    { k: "Por quê", v: perguntas.porque },
+    { k: "O que falta", v: perguntas.oQueFalta },
+    { k: "Pra onde vai", v: perguntas.praOnde },
   ];
 
   return (
-    <AppShell>
-      <div className="mb-2">
+    <AppShell alarme={sinal === "critico" || sinal === "atraso"}>
+      <div className="mb-3 flex items-center justify-between gap-3">
         <Link href="/os" className="font-mono text-xs text-aco-400 hover:text-ambar-500">
           ← Ordens de serviço
         </Link>
+        <PrioridadeBadge prioridade={os.prioridade} />
       </div>
 
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-aco-100">
-            {os.equipamento.tipo}
-          </h1>
-          <p className="mt-1 font-body text-sm text-aco-400">
-            {os.cliente.nome} · {TIPO_CLIENTE_ROTULO[os.cliente.tipo] ?? os.cliente.tipo}
-            {os.equipamento.placa ? ` · ${os.equipamento.placa}` : ""}
-          </p>
-          {os.travado && os.travamentoMotivo ? (
-            <p className="mt-1.5 font-body text-sm text-ambar-500">
-              Travado: {os.travamentoMotivo}
-              {os.travamentoResponsabilidade
-                ? ` (${RESPONSABILIDADE_ROTULO[os.travamentoResponsabilidade]})`
-                : ""}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <EstadoBadge estado={os.estado} />
-          <PrioridadeBadge prioridade={os.prioridade} />
-          {os.travado ? <TravamentoSelo responsabilidade={os.travamentoResponsabilidade} /> : null}
-        </div>
-      </div>
+      <header className="mb-5">
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-aco-100">
+          {os.equipamento.tipo}
+        </h1>
+        <p className="mt-1 font-body text-sm text-aco-400">
+          {os.cliente.nome} · {TIPO_CLIENTE_ROTULO[os.cliente.tipo] ?? os.cliente.tipo}
+          {os.equipamento.placa ? ` · ${os.equipamento.placa}` : ""}
+        </p>
+      </header>
 
-      <section aria-label="As quatro perguntas" className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {cartoes.map((c) => (
-          <div key={c.rotulo} className="rounded-md border border-grafite-700 bg-grafite-800 p-4">
-            <p className="font-mono text-xs uppercase tracking-wide text-aco-400">{c.rotulo}</p>
-            <p className="mt-1.5 font-body text-sm text-aco-100">{c.valor}</p>
-          </div>
-        ))}
+      {/* O INSTRUMENTO: medidor de estado + responsabilização (o que salta primeiro) */}
+      <section
+        aria-label="Estado e responsabilização"
+        className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_19rem]"
+      >
+        <div className="rounded-lg border border-grafite-700 bg-grafite-800 p-5">
+          <MedidorEstado estado={os.estado} sinal={sinal} prazoLabel={prazoLabel(diasRestantes)} />
+          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-grafite-700 pt-4">
+            {legenda.map((l) => (
+              <div key={l.k}>
+                <dt className="font-mono text-[11px] uppercase tracking-wide text-aco-400">{l.k}</dt>
+                <dd className="mt-0.5 font-body text-sm text-aco-200">{l.v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <Responsabilizacao bola={bola} detalhe={detalhe} />
       </section>
 
-      <section className="mt-8" aria-label="Próximo passo">
-        <h2 className="mb-3 font-display text-xl text-aco-100">Próximo passo</h2>
+      {/* FAIXA DE AÇÃO: o próximo passo, alvo grande */}
+      <section className="mt-5 rounded-lg border border-grafite-700 bg-grafite-850 p-4" aria-label="Próximo passo">
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.22em] text-aco-400">Próximo passo</p>
         <AcoesOs
           osId={os.id}
           proximos={proximos}
@@ -96,34 +122,41 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
         />
       </section>
 
-      <section className="mt-8" aria-label="Orçamento">
-        <h2 className="mb-3 font-display text-xl text-aco-100">Orçamento</h2>
-        <Orcamento
-          osId={os.id}
-          estado={os.estado}
-          cqAprovado={os.cqAprovado}
-          orcamento={orcamento}
-          podeEditar={podeEditarOrcamento}
-        />
-      </section>
+      {/* CORPO: orçamento | triagem */}
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <section aria-label="Orçamento">
+          <h2 className="mb-3 font-display text-xl text-aco-100">Orçamento</h2>
+          <Orcamento
+            osId={os.id}
+            estado={os.estado}
+            cqAprovado={os.cqAprovado}
+            orcamento={orcamento}
+            podeEditar={podeEditarOrcamento}
+          />
+        </section>
 
-      <section className="mt-8" aria-label="Triagem">
-        <h2 className="mb-3 font-display text-xl text-aco-100">Triagem</h2>
-        <AcoesTriagem
-          osId={os.id}
-          prioridade={os.prioridade}
-          temOverride={os.prioridadeOverride !== null}
-          travado={os.travado}
-        />
-      </section>
+        <section aria-label="Triagem">
+          <h2 className="mb-3 font-display text-xl text-aco-100">Triagem</h2>
+          <AcoesTriagem
+            osId={os.id}
+            prioridade={os.prioridade}
+            temOverride={os.prioridadeOverride !== null}
+            travado={os.travado}
+          />
+        </section>
+      </div>
 
-      <section className="mt-8" aria-label="Linha do tempo">
-        <h2 className="mb-3 font-display text-xl text-aco-100">Linha do tempo</h2>
-        <ol className="relative flex flex-col gap-4 border-l border-grafite-700 pl-5">
+      {/* LINHA DO TEMPO: recolhível */}
+      <details className="mt-6 rounded-lg border border-grafite-700 bg-grafite-800">
+        <summary className="cursor-pointer list-none px-4 py-3 font-display text-lg text-aco-100 [&::-webkit-details-marker]:hidden">
+          Linha do tempo
+          <span className="ml-2 font-mono text-xs text-aco-400">({os.eventos.length})</span>
+        </summary>
+        <ol className="relative flex flex-col gap-4 border-l border-grafite-700 px-5 pb-5 pl-9">
           {os.eventos.map((ev, i) => (
             <li key={`${ev.em.toISOString()}-${i}`} className="relative">
               <span
-                className="absolute -left-[1.4rem] top-1.5 size-2 rounded-full bg-ambar-500"
+                className="absolute -left-[1.15rem] top-1.5 size-2 rounded-full bg-ambar-500"
                 aria-hidden
               />
               <p className="font-body text-sm text-aco-100">
@@ -132,13 +165,11 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
                   : `Aberta (${rotuloEstado(ev.paraEstado)})`}
               </p>
               <p className="mt-0.5 font-mono text-xs text-aco-400">{DATA_HORA.format(ev.em)}</p>
-              {ev.motivo ? (
-                <p className="mt-0.5 font-body text-xs text-aco-400">{ev.motivo}</p>
-              ) : null}
+              {ev.motivo ? <p className="mt-0.5 font-body text-xs text-aco-400">{ev.motivo}</p> : null}
             </li>
           ))}
         </ol>
-      </section>
+      </details>
     </AppShell>
   );
 }

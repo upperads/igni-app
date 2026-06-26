@@ -1,46 +1,41 @@
 @import "tailwindcss";
 
 /*
-  Design system Igni (docs/03b_design.md). Board escuro de controle: grafite de cast QUENTE
-  (não preto frio), paleta de SINAL de 5 cores (que É o dado, não enfeite), e âmbar como marca +
-  segurança estrutural (listra de risco), nunca como status. Par tipográfico placa + instrumento.
+  Design system Igni — linguagem "INSTRUMENTO" (redesign). Os tokens são SEMÂNTICOS por convenção:
+  `grafite-*` = escada de SUPERFÍCIE (900 = fundo da página → 600 = borda forte);
+  `aco-*` = escada de TEXTO (100 = primário → 400 = apagado). Por isso giram com o tema.
+  Tema ESCURO é o default (board de chão/TV); `html[data-tema="claro"]` reescreve as mesmas vars
+  (galpão de dia/desktop). Sinal de 5 cores = o dado (status), nunca enfeite. Âmbar = marca/estrutura.
 */
 @theme {
-  /*
-    Cor em OKLCH (CR-1). Grafite QUENTE de verdade: hue ~75 (âmbar) com chroma mínimo (0.006–0.012)
-    — não o cinza-azulado de dashboard. Aço com um fio de calor. Sinal de 5 cores calibrado para ser
-    fosco (chroma contido), não neon. A escada de lightness controla o contraste (AA na TV).
-  */
-  /* Canvas grafite quente */
+  /* --- Superfície (escuro, default): grafite quente, hue ~75, chroma mínimo --- */
   --color-grafite-900: oklch(0.185 0.008 75);
   --color-grafite-850: oklch(0.21 0.008 75);
   --color-grafite-800: oklch(0.245 0.009 74);
   --color-grafite-700: oklch(0.305 0.01 72);
   --color-grafite-600: oklch(0.40 0.012 70);
 
-  /* Aço — texto (neutro com fio de calor) */
+  /* --- Texto (escuro): aço com fio de calor --- */
   --color-aco-100: oklch(0.93 0.006 80);
   --color-aco-200: oklch(0.84 0.007 80);
-  /* aco-300: secundário legível (AA) sobre grafite e à distância na TV; um degrau acima do 400. */
   --color-aco-300: oklch(0.73 0.008 80);
   --color-aco-400: oklch(0.63 0.009 78);
 
-  /* Âmbar — marca + sinalização estrutural (risco/foco/ativo). Nunca status. */
+  /* --- Âmbar: marca + estrutura (risco/foco/ativo). Nunca status. --- */
   --color-ambar-500: oklch(0.78 0.14 70);
   --color-ambar-600: oklch(0.70 0.13 65);
 
-  /* Paleta de sinal/triagem — só status, fosca (não neon): chroma contido nos extremos. */
+  /* --- Sinal/triagem: status, fosco (chroma contido) --- */
   --color-sinal-vermelho: oklch(0.585 0.2 27);
   --color-sinal-laranja: oklch(0.705 0.17 50);
   --color-sinal-amarelo: oklch(0.82 0.135 90);
   --color-sinal-verde: oklch(0.685 0.15 150);
   --color-sinal-azul: oklch(0.62 0.125 250);
 
-  /* Portal do cliente (tema claro, quente — não creme-clichê) */
+  /* --- Portal claro (osso/tinta): mantido p/ o portal público --- */
   --color-osso-50: oklch(0.97 0.006 85);
   --color-osso-100: oklch(0.94 0.007 84);
   --color-osso-200: oklch(0.89 0.008 84);
-  /* Tinta sobre osso (texto do portal claro) — quente, não preto frio. */
   --color-tinta-900: oklch(0.26 0.012 68);
   --color-tinta-500: oklch(0.52 0.012 70);
 
@@ -51,6 +46,32 @@
 }
 
 @layer base {
+  /* TEMA CLARO: reescreve as mesmas vars (galpão de dia). Superfície clara quente, texto tinta. */
+  html[data-tema="claro"] {
+    --color-grafite-900: oklch(0.972 0.006 85);
+    --color-grafite-850: oklch(0.95 0.006 85);
+    --color-grafite-800: oklch(0.93 0.007 84);
+    --color-grafite-700: oklch(0.87 0.008 83);
+    --color-grafite-600: oklch(0.76 0.01 80);
+
+    --color-aco-100: oklch(0.28 0.013 68);
+    --color-aco-200: oklch(0.37 0.012 70);
+    --color-aco-300: oklch(0.47 0.012 71);
+    --color-aco-400: oklch(0.57 0.012 72);
+
+    --color-ambar-500: oklch(0.72 0.14 64);
+    --color-ambar-600: oklch(0.62 0.13 58);
+
+    /* Sinal mais escuro p/ manter contraste sobre claro */
+    --color-sinal-vermelho: oklch(0.55 0.21 27);
+    --color-sinal-laranja: oklch(0.62 0.17 48);
+    --color-sinal-amarelo: oklch(0.70 0.14 84);
+    --color-sinal-verde: oklch(0.57 0.15 150);
+    --color-sinal-azul: oklch(0.55 0.14 250);
+
+    color-scheme: light;
+  }
+
   html {
     color-scheme: dark;
   }
@@ -60,7 +81,7 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
   }
-  /* Foco visível âmbar (WCAG 2.2) — estrutural, combina com a marca. */
+  /* Foco visível âmbar (WCAG 2.2). */
   :focus-visible {
     outline: 2px solid var(--color-ambar-500);
     outline-offset: 2px;

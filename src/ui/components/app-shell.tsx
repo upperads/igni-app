@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { sair } from "@/app/logout/actions";
 import { cn } from "@/ui/cn";
 import { RiskRail } from "./risk-rail";
+import { ToggleTema } from "./toggle-tema";
 
 const NAV = [
   { href: "/", rotulo: "Painel" },
@@ -56,6 +57,7 @@ export function AppShell({ children, alarme = false, setor }: Props) {
 
         <div className="flex items-center gap-2">
           <span className="hidden font-mono text-xs text-aco-400 md:inline">Retífica Central</span>
+          <ToggleTema />
           <span
             className="grid size-9 place-items-center rounded-full bg-grafite-700 font-display text-sm text-aco-100"
             aria-hidden

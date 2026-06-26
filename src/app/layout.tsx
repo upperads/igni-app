@@ -18,12 +18,18 @@ export const metadata: Metadata = {
   description: "O sistema operacional da sua oficina: triagem em tempo real e status para o cliente.",
 };
 
+// Aplica o tema salvo ANTES da pintura (evita flash). Escuro é o default.
+const TEMA_SCRIPT = `(function(){try{var t=localStorage.getItem("igni-tema");if(t==="claro")document.documentElement.dataset.tema="claro";}catch(e){}})();`;
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
       lang="pt-BR"
       className={`${display.variable} ${body.variable} ${mono.variable} h-full`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: TEMA_SCRIPT }} />
+      </head>
       <body className="min-h-full">{children}</body>
     </html>
   );
