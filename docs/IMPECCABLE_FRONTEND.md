@@ -113,3 +113,12 @@ deveriam ser feitas antes do M6 portal**, senão o tema claro nasce incoerente c
 - **Junto da 1ª fatia do M5:** os 3 quick-wins da V2 (nav honesta, `aco-300`/contraste = CR-2, error/loading = CR-8).
 - **Antes do M6 portal:** CR-1 (OKLCH), decisão da assinatura (⚠️), CR-5 (responsabilização proeminente).
 - **Polish contínuo:** CR-3 (motion), CR-4 (ritmo), CR-6/CR-7.
+
+---
+
+## ✅ Pago antes do portal (craft pass pré-M6)
+- **CR-1 (OKLCH)** — `globals.css` migrado para `oklch()`: grafites quentes de verdade (hue ~75, chroma 0.006–0.012), aço com fio de calor, sinal de 5 cores calibrado (chroma contido, "fosco" não neon). Lightness controla o contraste (AA na TV).
+- **⚠️ Assinatura resolvida** — a espinha de status deixou de ser side-stripe chapado: agora é **linha de instrumento nítida (2px) + sangria curta da cor para dentro** do card via `color-mix(in oklch, …)`. Conceito mantido (cor=triagem), execução elevada (gauge, não "borda colorida"). `SINAL` ganhou `cor` (CSS var) para o gradiente. `OsCard` reescrito (sem o ban).
+- **CR-5 (responsabilização proeminente)** — o pilar agora salta no board: card travado mostra **"BOLA: CLIENTE/OFICINA"** (âmbar quando é do cliente = ação; neutro quando é da oficina = transparência) no lugar do genérico "Travado". Propagado Home + modo TV.
+- *Pendente (polish contínuo, não bloqueia o portal):* CR-3 (motion do realtime), CR-4 (ritmo de espaçamento), CR-6/CR-7 (selos/KPI).
+- *Verificação:* typecheck/lint/build + 103 testes verdes. **Resultado visual a confirmar no navegador** (sem Playwright; OKLCH + color-mix são CSS moderno, suportado nos browsers atuais).

@@ -93,6 +93,7 @@ export default async function Home() {
                   prazoLabel={card.prazoLabel}
                   sinal={card.sinal}
                   travado={card.travado}
+                  travamentoResponsabilidade={card.travamentoResponsabilidade}
                   proximoBump={card.proximoBump}
                 />
               ))}

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { type EstadoOS, rotuloEstado } from "@/domain/os/estado";
 import type { Sinal } from "@/domain/os/painel";
+import type { Responsabilidade } from "@/domain/os/triagem";
 import { acaoTransicionar } from "@/app/os/actions";
 import { OsCard } from "@/ui/components/os-card";
 
@@ -16,6 +17,7 @@ interface Props {
   prazoLabel: string;
   sinal: Sinal;
   travado: boolean;
+  travamentoResponsabilidade: Responsabilidade | null;
   proximoBump: EstadoOS | null;
 }
 
@@ -54,6 +56,7 @@ export function CardPainelBump(props: Props) {
           prazo={props.prazoLabel}
           sinal={props.sinal}
           travado={props.travado}
+          responsabilidade={props.travamentoResponsabilidade}
         />
       </Link>
       {proximo ? (

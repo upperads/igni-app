@@ -6,33 +6,38 @@
   segurança estrutural (listra de risco), nunca como status. Par tipográfico placa + instrumento.
 */
 @theme {
+  /*
+    Cor em OKLCH (CR-1). Grafite QUENTE de verdade: hue ~75 (âmbar) com chroma mínimo (0.006–0.012)
+    — não o cinza-azulado de dashboard. Aço com um fio de calor. Sinal de 5 cores calibrado para ser
+    fosco (chroma contido), não neon. A escada de lightness controla o contraste (AA na TV).
+  */
   /* Canvas grafite quente */
-  --color-grafite-900: #14161a;
-  --color-grafite-850: #181b21;
-  --color-grafite-800: #1e2127;
-  --color-grafite-700: #2a2e37;
-  --color-grafite-600: #3a3f4b;
+  --color-grafite-900: oklch(0.185 0.008 75);
+  --color-grafite-850: oklch(0.21 0.008 75);
+  --color-grafite-800: oklch(0.245 0.009 74);
+  --color-grafite-700: oklch(0.305 0.01 72);
+  --color-grafite-600: oklch(0.40 0.012 70);
 
-  /* Aço — texto */
-  --color-aco-100: #e8ebf1;
-  --color-aco-200: #c7ccd6;
+  /* Aço — texto (neutro com fio de calor) */
+  --color-aco-100: oklch(0.93 0.006 80);
+  --color-aco-200: oklch(0.84 0.007 80);
   /* aco-300: secundário legível (AA) sobre grafite e à distância na TV; um degrau acima do 400. */
-  --color-aco-300: #a7adb8;
-  --color-aco-400: #8b919e;
+  --color-aco-300: oklch(0.73 0.008 80);
+  --color-aco-400: oklch(0.63 0.009 78);
 
   /* Âmbar — marca + sinalização estrutural (risco/foco/ativo). Nunca status. */
-  --color-ambar-500: #f2a93d;
-  --color-ambar-600: #d88e22;
+  --color-ambar-500: oklch(0.78 0.14 70);
+  --color-ambar-600: oklch(0.70 0.13 65);
 
-  /* Paleta de sinal/triagem — só status, fosca (não neon) */
-  --color-sinal-vermelho: #e5392f;
-  --color-sinal-laranja: #fb7a28;
-  --color-sinal-amarelo: #e8c53a;
-  --color-sinal-verde: #46b46e;
-  --color-sinal-azul: #4a90d9;
+  /* Paleta de sinal/triagem — só status, fosca (não neon): chroma contido nos extremos. */
+  --color-sinal-vermelho: oklch(0.585 0.2 27);
+  --color-sinal-laranja: oklch(0.705 0.17 50);
+  --color-sinal-amarelo: oklch(0.82 0.135 90);
+  --color-sinal-verde: oklch(0.685 0.15 150);
+  --color-sinal-azul: oklch(0.62 0.125 250);
 
   /* Portal do cliente (tema claro, quente — não creme-clichê) */
-  --color-osso-50: #f7f6f3;
+  --color-osso-50: oklch(0.97 0.006 85);
 
   /* Tipografia: placa industrial (display) · grotesca robusta (corpo) · mono (instrumento) */
   --font-display: var(--font-saira), "Arial Narrow", sans-serif;

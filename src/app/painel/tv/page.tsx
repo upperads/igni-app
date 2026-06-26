@@ -71,6 +71,7 @@ export default async function PainelTvPage() {
                       prazo={card.prazoLabel}
                       sinal={card.sinal}
                       travado={card.travado}
+                      responsabilidade={card.travamentoResponsabilidade}
                     />
                   ))}
                 </div>
