@@ -3,9 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const ROTAS_PUBLICAS = ["/login", "/criar-conta"];
 
-// Fluxo de recuperação de senha: sempre passa (não redireciona por auth nem por 2FA), porque a
-// sessão de recuperação é AAL1 e precisa chegar até a tela de nova senha.
-const ROTAS_LIVRES = ["/recuperar", "/atualizar-senha", "/auth"];
+// Rotas que sempre passam (sem redirecionar por auth nem por 2FA):
+// - recuperação de senha (sessão AAL1 que precisa chegar à tela de nova senha);
+// - portal do cliente (público, sem sessão — o TOKEN é a credencial, ADR-012).
+const ROTAS_LIVRES = ["/recuperar", "/atualizar-senha", "/auth", "/portal"];
 
 function ehPublica(path: string): boolean {
   return ROTAS_PUBLICAS.some((r) => path === r || path.startsWith(`${r}/`));

@@ -246,7 +246,7 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
           <p className="font-mono text-xs uppercase tracking-wide text-aco-400">Link do cliente</p>
           <code className="font-mono text-xs break-all text-ambar-500">{link}</code>
           <p className="mt-1 font-body text-xs text-aco-400">
-            O portal do cliente (onde ele abre este link) entra no próximo módulo.
+            Mande este link ao cliente: ele vê o estágio e aprova ou recusa o orçamento por aqui.
           </p>
         </div>
       ) : null}

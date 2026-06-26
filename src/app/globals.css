@@ -38,6 +38,11 @@
 
   /* Portal do cliente (tema claro, quente — não creme-clichê) */
   --color-osso-50: oklch(0.97 0.006 85);
+  --color-osso-100: oklch(0.94 0.007 84);
+  --color-osso-200: oklch(0.89 0.008 84);
+  /* Tinta sobre osso (texto do portal claro) — quente, não preto frio. */
+  --color-tinta-900: oklch(0.26 0.012 68);
+  --color-tinta-500: oklch(0.52 0.012 70);
 
   /* Tipografia: placa industrial (display) · grotesca robusta (corpo) · mono (instrumento) */
   --font-display: var(--font-saira), "Arial Narrow", sans-serif;
