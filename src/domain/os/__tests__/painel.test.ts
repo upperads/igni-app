@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   calcularKpis,
   culpaDoAtraso,
+  type EventoTransicao,
   type ItemKpi,
+  resumoCulpa,
   sinalDaOs,
 } from "@/domain/os/painel";
 
@@ -82,5 +84,28 @@ describe("painel — KPIs (US-11)", () => {
   it("fila vazia zera tudo", () => {
     const k = calcularKpis([]);
     expect(k).toEqual({ naCasa: 0, paradaCritica: 0, travadas: 0, atraso: { total: 0, nossa: 0, cliente: 0, peca: 0 } });
+  });
+});
+
+describe("painel — histórico de responsabilização (resumoCulpa)", () => {
+  it("conta episódios de espera/retrabalho por responsável", () => {
+    const eventos: EventoTransicao[] = [
+      { deEstado: "orcamento", paraEstado: "aguardando_aprovacao" }, // cliente
+      { deEstado: "aguardando_aprovacao", paraEstado: "aguardando_peca" }, // peça
+      { deEstado: "controle_qualidade", paraEstado: "execucao" }, // retrabalho nosso
+      { deEstado: "aberta", paraEstado: "diagnostico" }, // não conta
+      { deEstado: "execucao", paraEstado: "controle_qualidade" }, // não conta
+    ];
+    const r = resumoCulpa(eventos);
+    expect(r).toEqual({ total: 3, nossa: 1, cliente: 1, peca: 1 });
+  });
+
+  it("sem episódios de espera → zero", () => {
+    expect(resumoCulpa([{ deEstado: "aberta", paraEstado: "diagnostico" }])).toEqual({
+      total: 0,
+      nossa: 0,
+      cliente: 0,
+      peca: 0,
+    });
   });
 });

@@ -3,8 +3,9 @@ import { redirect } from "next/navigation";
 import { CardPainelBump } from "@/app/_components/card-painel-bump";
 import { RealtimePainel } from "@/app/_components/realtime-painel";
 import { sessaoAtual } from "@/infra/auth/sessao";
-import { listarPainel } from "@/infra/composition/os";
+import { historicoResponsabilidade, listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
+import { BarraResponsabilizacao } from "@/ui/components/barra-responsabilizacao";
 import { Button } from "@/ui/components/button";
 import { KpiStat } from "@/ui/components/kpi-stat";
 
@@ -14,7 +15,10 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const { kpis, etapas } = await listarPainel(sessao);
+  const [{ kpis, etapas }, historico] = await Promise.all([
+    listarPainel(sessao),
+    historicoResponsabilidade(sessao, 30),
+  ]);
   const alarme = kpis.paradaCritica > 0 || kpis.atraso.total > 0;
 
   return (
@@ -56,14 +60,18 @@ export default async function Home() {
         <KpiStat rotulo="Atraso" valor={String(kpis.atraso.total)} manchete alarme={kpis.atraso.total > 0} />
       </section>
 
-      {kpis.atraso.total > 0 ? (
-        <p className="mt-3 font-mono text-xs text-aco-400">
-          Atraso, de quem é a bola:{" "}
-          <span className="text-aco-200">{kpis.atraso.nossa} nossa</span> ·{" "}
-          <span className="text-aco-200">{kpis.atraso.cliente} cliente</span> ·{" "}
-          <span className="text-aco-200">{kpis.atraso.peca} peça</span>
-        </p>
-      ) : null}
+      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <BarraResponsabilizacao
+          titulo="Atraso · de quem é a bola"
+          sufixo="OS"
+          dist={kpis.atraso}
+        />
+        <BarraResponsabilizacao
+          titulo="Últimos 30 dias · de quem foi a bola"
+          sufixo="esperas"
+          dist={historico}
+        />
+      </div>
 
       {etapas.length === 0 ? (
         <div className="mt-8 rounded-lg border border-dashed border-grafite-600 bg-grafite-850 px-6 py-12 text-center">

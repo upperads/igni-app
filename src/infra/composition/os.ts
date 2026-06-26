@@ -1,4 +1,4 @@
-import { desc, eq, ne } from "drizzle-orm";
+import { desc, eq, gte, ne } from "drizzle-orm";
 import {
   abrirOS,
   type AbrirOSInput,
@@ -30,7 +30,14 @@ import {
   type TravarInput,
 } from "@/application/triagem";
 import { ESTADOS_OS, type EstadoOS, proximoBump, rotuloEstado } from "@/domain/os/estado";
-import { calcularKpis, type Kpis, type Sinal, sinalDaOs } from "@/domain/os/painel";
+import {
+  calcularKpis,
+  type Kpis,
+  type ResumoCulpa,
+  resumoCulpa,
+  type Sinal,
+  sinalDaOs,
+} from "@/domain/os/painel";
 import {
   diasRestantesAte,
   ordenarFila,
@@ -401,6 +408,24 @@ export async function listarPainel(
     .filter((etapa) => etapa.cards.length > 0);
 
   return { kpis, etapas };
+}
+
+/**
+ * Histórico de responsabilização (o diferencial, ADR/SDD): "de quem FOI a bola" no período, lido
+ * ON-READ sobre `evento` (sem tabela nova). `janelaDias` = tamanho da janela (default 30).
+ */
+export async function historicoResponsabilidade(
+  sessao: SessaoTenant,
+  janelaDias = 30,
+): Promise<ResumoCulpa> {
+  const desde = new Date(Date.now() - janelaDias * 86_400_000);
+  const eventos = await database.withTenant(sessao.tenantId, (tx) =>
+    tx
+      .select({ deEstado: evento.deEstado, paraEstado: evento.paraEstado })
+      .from(evento)
+      .where(gte(evento.em, desde)),
+  );
+  return resumoCulpa(eventos);
 }
 
 export interface EventoOs {

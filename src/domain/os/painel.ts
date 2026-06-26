@@ -70,6 +70,41 @@ export interface Kpis {
   atraso: { total: number; nossa: number; cliente: number; peca: number };
 }
 
+/**
+ * Histórico de responsabilização (o diferencial, sobre a linha do tempo — sem tabela nova, ADR/SDD).
+ * Conta os EPISÓDIOS de espera/retrabalho por responsável, a partir dos eventos de transição:
+ * entrar em `aguardando_aprovacao` = bola foi do cliente; em `aguardando_peca` = peça; voltar do
+ * CQ para execução (retrabalho) = nossa. É "de quem FOI a bola" no período. Pura, sem relógio.
+ */
+export interface EventoTransicao {
+  deEstado: EstadoOS | null;
+  paraEstado: EstadoOS;
+}
+
+export interface ResumoCulpa {
+  total: number;
+  nossa: number;
+  cliente: number;
+  peca: number;
+}
+
+export function resumoCulpa(eventos: readonly EventoTransicao[]): ResumoCulpa {
+  const r: ResumoCulpa = { total: 0, nossa: 0, cliente: 0, peca: 0 };
+  for (const e of eventos) {
+    if (e.paraEstado === "aguardando_aprovacao") {
+      r.cliente += 1;
+      r.total += 1;
+    } else if (e.paraEstado === "aguardando_peca") {
+      r.peca += 1;
+      r.total += 1;
+    } else if (e.deEstado === "controle_qualidade" && e.paraEstado === "execucao") {
+      r.nossa += 1;
+      r.total += 1;
+    }
+  }
+  return r;
+}
+
 /** Calcula os KPIs de gestão sobre as OS ativas (US-11). Espera receber só as não entregues. */
 export function calcularKpis(oss: readonly ItemKpi[]): Kpis {
   const kpis: Kpis = {
