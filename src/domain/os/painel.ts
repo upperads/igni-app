@@ -105,6 +105,59 @@ export function resumoCulpa(eventos: readonly EventoTransicao[]): ResumoCulpa {
   return r;
 }
 
+/**
+ * Métricas de GESTÃO do período (P1 — o que torna o Igni vendável). Tudo on-read sobre `evento`,
+ * sem tabela nova. Dá ao dono dois números que justificam o preço:
+ *  - ADOÇÃO DO CHÃO: % dos avanços feitos pelo chão (o teste do Régis; prova que a equipe usa);
+ *  - RESPONSABILIZAÇÃO: de quem foi a bola + % das esperas FORA da alçada da oficina (cliente/peça).
+ */
+export interface EventoGestao {
+  deEstado: EstadoOS | null;
+  paraEstado: EstadoOS;
+  origem: string;
+}
+
+export interface MetricasAdocao {
+  /** Transições reais (exclui a abertura da OS). */
+  total: number;
+  chao: number;
+  escritorio: number;
+  /** % dos avanços feitos pelo chão (0–100, inteiro). */
+  pctChao: number;
+}
+
+export interface RelatorioGestao {
+  adocao: MetricasAdocao;
+  culpa: ResumoCulpa;
+  /** % das esperas que NÃO foram da oficina (cliente + peça), 0–100. */
+  pctForaDaAlcada: number;
+}
+
+function pct(parte: number, total: number): number {
+  return total === 0 ? 0 : Math.round((parte / total) * 100);
+}
+
+export function metricasAdocao(eventos: readonly EventoGestao[]): MetricasAdocao {
+  let total = 0;
+  let chao = 0;
+  for (const e of eventos) {
+    if (e.deEstado === null) {
+      continue; // abertura não é "avanço"
+    }
+    total += 1;
+    if (e.origem === "chao") {
+      chao += 1;
+    }
+  }
+  return { total, chao, escritorio: total - chao, pctChao: pct(chao, total) };
+}
+
+export function relatorioGestao(eventos: readonly EventoGestao[]): RelatorioGestao {
+  const adocao = metricasAdocao(eventos);
+  const culpa = resumoCulpa(eventos);
+  return { adocao, culpa, pctForaDaAlcada: pct(culpa.cliente + culpa.peca, culpa.total) };
+}
+
 /** Calcula os KPIs de gestão sobre as OS ativas (US-11). Espera receber só as não entregues. */
 export function calcularKpis(oss: readonly ItemKpi[]): Kpis {
   const kpis: Kpis = {

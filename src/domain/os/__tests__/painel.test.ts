@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   calcularKpis,
   culpaDoAtraso,
+  type EventoGestao,
   type EventoTransicao,
   type ItemKpi,
+  metricasAdocao,
+  relatorioGestao,
   resumoCulpa,
   sinalDaOs,
 } from "@/domain/os/painel";
@@ -107,5 +110,40 @@ describe("painel — histórico de responsabilização (resumoCulpa)", () => {
       cliente: 0,
       peca: 0,
     });
+  });
+});
+
+describe("painel — métricas de gestão (P1, ROI)", () => {
+  it("adoção do chão: % dos avanços feitos pelo chão (exclui abertura)", () => {
+    const eventos: EventoGestao[] = [
+      { deEstado: null, paraEstado: "aberta", origem: "escritorio" }, // abertura, não conta
+      { deEstado: "aberta", paraEstado: "diagnostico", origem: "chao" },
+      { deEstado: "diagnostico", paraEstado: "orcamento", origem: "chao" },
+      { deEstado: "execucao", paraEstado: "controle_qualidade", origem: "escritorio" },
+    ];
+    const m = metricasAdocao(eventos);
+    expect(m.total).toBe(3);
+    expect(m.chao).toBe(2);
+    expect(m.escritorio).toBe(1);
+    expect(m.pctChao).toBe(67);
+  });
+
+  it("relatório de gestão: adoção + culpa + % fora da alçada da oficina", () => {
+    const eventos: EventoGestao[] = [
+      { deEstado: "orcamento", paraEstado: "aguardando_aprovacao", origem: "escritorio" }, // cliente
+      { deEstado: "aguardando_aprovacao", paraEstado: "aguardando_peca", origem: "chao" }, // peça
+      { deEstado: "controle_qualidade", paraEstado: "execucao", origem: "chao" }, // nossa
+    ];
+    const r = relatorioGestao(eventos);
+    expect(r.culpa).toEqual({ total: 3, nossa: 1, cliente: 1, peca: 1 });
+    expect(r.pctForaDaAlcada).toBe(67); // (cliente+peca)/total = 2/3
+    expect(r.adocao.total).toBe(3);
+    expect(r.adocao.chao).toBe(2);
+  });
+
+  it("período vazio não quebra (0%)", () => {
+    const r = relatorioGestao([]);
+    expect(r.adocao.pctChao).toBe(0);
+    expect(r.pctForaDaAlcada).toBe(0);
   });
 });

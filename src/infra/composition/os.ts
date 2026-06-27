@@ -34,6 +34,8 @@ import { ESTADOS_OS, type EstadoOS, proximoBump, rotuloEstado } from "@/domain/o
 import {
   calcularKpis,
   type Kpis,
+  type RelatorioGestao,
+  relatorioGestao,
   type ResumoCulpa,
   resumoCulpa,
   type Sinal,
@@ -434,6 +436,24 @@ export async function historicoResponsabilidade(
       .where(gte(evento.em, desde)),
   );
   return resumoCulpa(eventos);
+}
+
+/**
+ * Relatório de gestão do período (P1 — o que torna vendável): adoção do chão (% avanços) +
+ * responsabilização + % fora da alçada da oficina. ON-READ sobre `evento`, sem tabela nova.
+ */
+export async function relatorioDeGestao(
+  sessao: SessaoTenant,
+  janelaDias = 30,
+): Promise<RelatorioGestao> {
+  const desde = new Date(Date.now() - janelaDias * 86_400_000);
+  const eventos = await database.withTenant(sessao.tenantId, (tx) =>
+    tx
+      .select({ deEstado: evento.deEstado, paraEstado: evento.paraEstado, origem: evento.origem })
+      .from(evento)
+      .where(gte(evento.em, desde)),
+  );
+  return relatorioGestao(eventos);
 }
 
 export interface EventoOs {

@@ -10,13 +10,14 @@ const NAV = [
   { href: "/chao", rotulo: "Chão" },
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/os", rotulo: "OS" },
+  { href: "/relatorio", rotulo: "Relatório" },
   { href: "/painel/tv", rotulo: "Modo TV" },
   { href: "/primeiros-passos", rotulo: "Primeiros passos" },
 ] as const;
 
-// Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; Modo TV é de parede.
-const NAV_MOBILE = NAV.filter(
-  (n) => n.href !== "/painel/tv" && n.href !== "/primeiros-passos",
+// Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; o resto é de desktop.
+const NAV_MOBILE = NAV.filter((n) =>
+  ["/", "/chao", "/triagem", "/os"].includes(n.href),
 );
 
 interface Props {
