@@ -5,11 +5,15 @@ import type { Database } from "@/infra/db/connection";
 import { evento, os } from "@/infra/db/schema";
 import type { SessaoTenant } from "./abrir-os";
 
+/** De onde veio o avanço (métrica de adoção do chão). Default escritório. */
+export type OrigemEvento = "escritorio" | "chao" | "cliente" | "sistema";
+
 export interface ExecutarTransicaoInput {
   osId: string;
   para: EstadoOS;
   contexto: ContextoTransicao;
   motivo?: string;
+  origem?: OrigemEvento;
 }
 
 export interface ResultadoExecucao {
@@ -62,6 +66,7 @@ export async function executarTransicao(
       paraEstado: input.para,
       porUsuarioId: sessao.usuarioId,
       motivo: input.motivo,
+      origem: input.origem ?? "escritorio",
     });
 
     return { ok: true, estado: input.para };

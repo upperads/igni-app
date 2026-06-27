@@ -1,12 +1,12 @@
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { estadoOs } from "./enums";
+import { estadoOs, origemEvento } from "./enums";
 import { os } from "./os";
 import { tenant } from "./tenant";
 import { usuario } from "./usuario";
 
 /**
- * Evento de transição da OS (de/para/quem/quando/motivo) — a linha do tempo e a prova de garantia
- * (RF-11). `de_estado` é nulo no evento de abertura. Toda transição válida grava um evento.
+ * Evento de transição da OS (de/para/quem/quando/motivo/origem) — a linha do tempo e a prova de
+ * garantia (RF-11). `de_estado` é nulo na abertura. `origem` mede a ADOÇÃO DO CHÃO (chão vs escritório).
  */
 export const evento = pgTable("evento", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -20,5 +20,6 @@ export const evento = pgTable("evento", {
   paraEstado: estadoOs("para_estado").notNull(),
   porUsuarioId: uuid("por_usuario_id").references(() => usuario.id, { onDelete: "set null" }),
   motivo: text("motivo"),
+  origem: origemEvento("origem").notNull().default("escritorio"),
   em: timestamp("em", { withTimezone: true }).notNull().defaultNow(),
 });

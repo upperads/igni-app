@@ -84,6 +84,21 @@ describe("abrir OS e transições (US-04 / US-05)", () => {
     expect(ob?.numero).toBe(2);
   });
 
+  it("registra a ORIGEM do avanço (chão vs escritório) — métrica de adoção", async () => {
+    const { osId } = await abrirOS(database, sessao, INPUT);
+    await executarTransicao(database, sessao, {
+      osId,
+      para: "diagnostico",
+      contexto: SEM_GATE,
+      origem: "chao",
+    });
+    const [ev] = await database.db
+      .select()
+      .from(evento)
+      .where(and(eq(evento.osId, osId), eq(evento.paraEstado, "diagnostico")));
+    expect(ev?.origem).toBe("chao");
+  });
+
   it("executa transição válida, muda o estado e grava o EVENTO", async () => {
     const { osId } = await abrirOS(database, sessao, INPUT);
 

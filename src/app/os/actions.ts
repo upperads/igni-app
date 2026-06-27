@@ -130,6 +130,7 @@ export async function acaoTransicionar(
   osId: string,
   para: EstadoOS,
   motivo?: string,
+  origem: "escritorio" | "chao" = "escritorio",
 ): Promise<ResultadoAcao> {
   const auth = await autorizar("os:avancar");
   if ("erro" in auth) {
@@ -138,7 +139,7 @@ export async function acaoTransicionar(
   const { sessao } = auth;
 
   try {
-    const r = await transicionarNoTenant(sessao, { osId, para, motivo });
+    const r = await transicionarNoTenant(sessao, { osId, para, motivo, origem });
     if (r.ok) {
       revalidarOs(osId);
     }
@@ -146,6 +147,11 @@ export async function acaoTransicionar(
   } catch {
     return { ok: false, motivo: "Não foi possível avançar a OS. Tente novamente." };
   }
+}
+
+/** Bump a partir da TELA DE CHÃO (marca origem='chao' — a métrica de adoção). 1 toque, sem digitar. */
+export async function acaoBumpChao(osId: string, para: EstadoOS): Promise<ResultadoAcao> {
+  return acaoTransicionar(osId, para, undefined, "chao");
 }
 
 /** US-10 — recall: desfaz a última transição da OS. */

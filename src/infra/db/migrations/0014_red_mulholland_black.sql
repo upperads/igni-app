@@ -1,0 +1,2 @@
+CREATE TYPE "public"."origem_evento" AS ENUM('escritorio', 'chao', 'cliente', 'sistema');--> statement-breakpoint
+ALTER TABLE "evento" ADD COLUMN "origem" "origem_evento" DEFAULT 'escritorio' NOT NULL;

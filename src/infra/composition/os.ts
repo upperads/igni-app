@@ -7,6 +7,7 @@ import {
 } from "@/application/abrir-os";
 import {
   executarTransicao,
+  type OrigemEvento,
   recallTransicao,
   type ResultadoExecucao,
 } from "@/application/executar-transicao";
@@ -79,6 +80,7 @@ export interface TransicaoInput {
   osId: string;
   para: EstadoOS;
   motivo?: string;
+  origem?: OrigemEvento;
 }
 
 export async function transicionarNoTenant(
@@ -92,6 +94,7 @@ export async function transicionarNoTenant(
     para: input.para,
     contexto,
     motivo: input.motivo,
+    origem: input.origem,
   });
   // Mudar de estado muda o "trabalho restante" → a prioridade pode mudar. Mantém o board honesto.
   if (r.ok) {

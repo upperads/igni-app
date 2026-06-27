@@ -58,3 +58,11 @@ export const tipoItemOrcamento = pgEnum("tipo_item_orcamento", [
   "mao_de_obra",
   "terceiro",
 ]);
+
+/** De onde veio a transição da OS — a métrica de ADOÇÃO DO CHÃO (chão vs escritório). */
+export const origemEvento = pgEnum("origem_evento", [
+  "escritorio",
+  "chao",
+  "cliente",
+  "sistema",
+]);
