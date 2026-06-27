@@ -83,7 +83,10 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
       </div>
 
       <header className="mb-5">
-        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight text-aco-100">
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-aco-400">
+          OS-{os.numero}
+        </p>
+        <h1 className="mt-1 font-display text-3xl font-bold leading-tight tracking-tight text-aco-100">
           {os.equipamento.tipo}
         </h1>
         <p className="mt-1 font-body text-sm text-aco-400">

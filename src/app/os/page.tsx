@@ -54,6 +54,9 @@ export default async function OsPage() {
                 href={`/os/${item.id}`}
                 className="flex items-center gap-4 rounded-md border border-grafite-700 bg-grafite-800 px-4 py-3 transition-colors hover:border-grafite-600"
               >
+                <span className="shrink-0 font-mono text-xs tabular-nums text-aco-400">
+                  OS-{item.numero}
+                </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-display text-lg leading-tight text-aco-100">
                     {item.equipamento}

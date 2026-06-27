@@ -27,6 +27,7 @@ export interface ItemPortal {
 }
 
 export interface PortalView {
+  numero: number;
   equipamento: string;
   placa: string | null;
   chassiMascarado: string | null;
@@ -51,6 +52,7 @@ export async function dadosPortal(
   return database.withTenant(r.tenantId, async (tx) => {
     const [linha] = await tx
       .select({
+        numero: os.numero,
         estado: os.estado,
         equipTipo: equipamento.tipo,
         placa: equipamento.placa,
@@ -101,6 +103,7 @@ export async function dadosPortal(
     const bola: Bola = linha.estado === "aguardando_aprovacao" ? "cliente" : "oficina";
 
     return {
+      numero: linha.numero,
       equipamento: linha.equipTipo,
       placa: linha.placa,
       chassiMascarado: mascararChassi(linha.chassi),

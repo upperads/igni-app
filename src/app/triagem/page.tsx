@@ -56,7 +56,7 @@ export default async function TriagemPage() {
                     {item.equipamento}
                   </p>
                   <p className="truncate font-body text-xs text-aco-400">
-                    {item.clienteNome} · {rotuloEstado(item.estado)}
+                    OS-{item.numero} · {item.clienteNome} · {rotuloEstado(item.estado)}
                   </p>
                 </div>
                 {item.travado ? (

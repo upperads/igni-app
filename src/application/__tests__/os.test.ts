@@ -75,6 +75,15 @@ describe("abrir OS e transições (US-04 / US-05)", () => {
     expect(eventos[0]?.paraEstado).toBe("aberta");
   });
 
+  it("numera as OS sequencialmente por tenant (ADR-011)", async () => {
+    const a = await abrirOS(database, sessao, INPUT);
+    const b = await abrirOS(database, sessao, INPUT);
+    const [oa] = await database.db.select().from(os).where(eq(os.id, a.osId));
+    const [ob] = await database.db.select().from(os).where(eq(os.id, b.osId));
+    expect(oa?.numero).toBe(1);
+    expect(ob?.numero).toBe(2);
+  });
+
   it("executa transição válida, muda o estado e grava o EVENTO", async () => {
     const { osId } = await abrirOS(database, sessao, INPUT);
 

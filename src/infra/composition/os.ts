@@ -235,6 +235,7 @@ export async function orcamentoDaOs(
 
 export interface ItemListaOs {
   id: string;
+  numero: number;
   estado: EstadoOS;
   equipamento: string;
   clienteNome: string;
@@ -246,6 +247,7 @@ export function listarOs(sessao: SessaoTenant): Promise<ItemListaOs[]> {
     tx
       .select({
         id: os.id,
+        numero: os.numero,
         estado: os.estado,
         equipamento: equipamento.tipo,
         clienteNome: cliente.nome,
@@ -261,6 +263,7 @@ export function listarOs(sessao: SessaoTenant): Promise<ItemListaOs[]> {
 
 export interface ItemTriagem {
   id: string;
+  numero: number;
   equipamento: string;
   clienteNome: string;
   estado: EstadoOS;
@@ -278,6 +281,7 @@ export async function listarTriagem(sessao: SessaoTenant): Promise<ItemTriagem[]
     tx
       .select({
         id: os.id,
+        numero: os.numero,
         equipamento: equipamento.tipo,
         clienteNome: cliente.nome,
         estado: os.estado,
@@ -322,9 +326,9 @@ export interface PainelDados {
   etapas: EtapaPainel[];
 }
 
-/** Ref curta da OS até existir número sequencial por tenant (follow-up). */
-function refCurta(id: string): string {
-  return id.slice(0, 8);
+/** Código legível da OS (ADR-011): "OS-41". */
+function codigoOs(numero: number): string {
+  return `OS-${numero}`;
 }
 
 function prazoLabel(dias: number | null): string {
@@ -352,6 +356,7 @@ export async function listarPainel(
     tx
       .select({
         id: os.id,
+        numero: os.numero,
         equipamento: equipamento.tipo,
         responsavel: usuario.nome,
         estado: os.estado,
@@ -394,7 +399,7 @@ export async function listarPainel(
         .filter((l) => l.estado === estado)
         .map<CardPainel>((l) => ({
           id: l.id,
-          codigo: refCurta(l.id),
+          codigo: codigoOs(l.numero),
           equipamento: l.equipamento,
           responsavel: l.responsavel,
           estado: l.estado,
@@ -437,6 +442,7 @@ export interface EventoOs {
 
 export interface DetalheOs {
   id: string;
+  numero: number;
   estado: EstadoOS;
   tipoServico: string | null;
   prazoPrometido: string | null;
@@ -458,6 +464,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
     const [linha] = await tx
       .select({
         id: os.id,
+        numero: os.numero,
         estado: os.estado,
         tipoServico: os.tipoServico,
         prazoPrometido: os.prazoPrometido,
@@ -500,6 +507,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
 
     return {
       id: linha.id,
+      numero: linha.numero,
       estado: linha.estado,
       tipoServico: linha.tipoServico,
       prazoPrometido: linha.prazoPrometido,

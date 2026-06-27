@@ -15,3 +15,4 @@ export * from "./evento";
 export * from "./ajuste-prioridade";
 export * from "./orcamento";
 export * from "./orcamento-item";
+export * from "./tenant-contador-os";

@@ -2,9 +2,11 @@ import {
   boolean,
   date,
   doublePrecision,
+  integer,
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 import { entrada } from "./entrada";
@@ -16,13 +18,16 @@ import { usuario } from "./usuario";
 
 /**
  * Ordem de serviço — núcleo do M2. `estado` é dirigido pela máquina de estados (ADR-008).
- * Prioridade e travamento (M3) entram como colunas depois. `entrou_no_estado_em` mede tempo parado.
+ * `numero` é sequencial POR TENANT ("OS-41"), gerado via tabela-contador (ADR-011).
  */
-export const os = pgTable("os", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  tenantId: uuid("tenant_id")
-    .notNull()
-    .references(() => tenant.id, { onDelete: "cascade" }),
+export const os = pgTable(
+  "os",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    numero: integer("numero").notNull(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenant.id, { onDelete: "cascade" }),
   entradaId: uuid("entrada_id")
     .notNull()
     .references(() => entrada.id, { onDelete: "restrict" }),
@@ -43,7 +48,9 @@ export const os = pgTable("os", {
   travamentoResponsabilidade: responsabilidade("travamento_responsabilidade"),
   // Gate do CQ (RN-01): aprovação do controle de qualidade. Resetada ao reentrar no CQ (retrabalho).
   cqAprovado: boolean("cq_aprovado").notNull().default(false),
-  prazoPrometido: date("prazo_prometido"),
-  entrouNoEstadoEm: timestamp("entrou_no_estado_em", { withTimezone: true }).notNull().defaultNow(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+    prazoPrometido: date("prazo_prometido"),
+    entrouNoEstadoEm: timestamp("entrou_no_estado_em", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique("os_numero_tenant").on(t.tenantId, t.numero)],
+);

@@ -74,7 +74,10 @@ function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
   return (
     <div className="flex flex-col gap-8">
       <header>
-        <h1 className="font-display text-3xl leading-tight text-tinta-900">{dados.equipamento}</h1>
+        <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-tinta-500">
+          OS-{dados.numero}
+        </p>
+        <h1 className="mt-1 font-display text-3xl leading-tight text-tinta-900">{dados.equipamento}</h1>
         <p className="mt-1 font-body text-sm text-tinta-500">
           {dados.clienteNome}
           {dados.placa ? ` · ${dados.placa}` : ""}

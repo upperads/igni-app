@@ -1,6 +1,18 @@
+import { eq, sql } from "drizzle-orm";
 import { DadosInvalidosError } from "@/domain/shared/errors";
-import type { Database } from "@/infra/db/connection";
-import { cliente, entrada, equipamento, evento, os } from "@/infra/db/schema";
+import type { Database, TenantTx } from "@/infra/db/connection";
+import { cliente, entrada, equipamento, evento, os, tenantContadorOs } from "@/infra/db/schema";
+
+/** Próximo número de OS do tenant (ADR-011). Race-safe: o UPDATE...RETURNING trava a linha do contador. */
+async function proximoNumeroOs(tx: TenantTx, tenantId: string): Promise<number> {
+  await tx.insert(tenantContadorOs).values({ tenantId }).onConflictDoNothing();
+  const [linha] = await tx
+    .update(tenantContadorOs)
+    .set({ proximo: sql`${tenantContadorOs.proximo} + 1` })
+    .where(eq(tenantContadorOs.tenantId, tenantId))
+    .returning({ proximo: tenantContadorOs.proximo });
+  return linha!.proximo - 1;
+}
 
 /** Sessão autenticada já resolvida (tenant + usuário corrente). */
 export interface SessaoTenant {
@@ -66,7 +78,7 @@ export async function abrirOS(
       })
       .returning({ id: cliente.id });
 
-    const [eq] = await tx
+    const [equip] = await tx
       .insert(equipamento)
       .values({
         tenantId: sessao.tenantId,
@@ -90,12 +102,14 @@ export async function abrirOS(
       })
       .returning({ id: entrada.id });
 
+    const numero = await proximoNumeroOs(tx, sessao.tenantId);
     const [ordem] = await tx
       .insert(os)
       .values({
         tenantId: sessao.tenantId,
+        numero,
         entradaId: en!.id,
-        equipamentoId: eq!.id,
+        equipamentoId: equip!.id,
         tipoServico: input.tipoServico,
         responsavelId: sessao.usuarioId,
         estado: "aberta",
@@ -111,6 +125,6 @@ export async function abrirOS(
       motivo: "OS aberta",
     });
 
-    return { osId: ordem!.id, clienteId: cl!.id, equipamentoId: eq!.id, entradaId: en!.id };
+    return { osId: ordem!.id, clienteId: cl!.id, equipamentoId: equip!.id, entradaId: en!.id };
   });
 }
