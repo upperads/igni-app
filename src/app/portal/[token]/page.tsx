@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import type { EstadoOS } from "@/domain/os/estado";
+import { statusCliente } from "@/domain/os/status-cliente";
 import { ROTULO_TIPO_ITEM } from "@/domain/orcamento/orcamento";
 import { dadosPortal, type PortalView } from "@/infra/composition/portal";
 import { dentroDoLimite } from "@/infra/rate-limit";
@@ -69,7 +70,8 @@ export default async function PortalPage({ params }: { params: Promise<{ token: 
 
 function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
   const marcoAtual = MARCO_DE[dados.estado];
-  const bolaCliente = dados.bola === "cliente";
+  const status = statusCliente(dados.estado);
+  const precisaAgir = status.acao !== null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -109,24 +111,19 @@ function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
         </div>
       </section>
 
-      {/* Responsabilização: o herói. CDC-safe (estado/dependência, não isenção de culpa). */}
+      {/* Status do serviço — FATO, não acusação (honestidade simétrica, CDC-safe). Âmbar só quando
+          depende de você (vira ação), neutro quando a oficina está trabalhando. */}
       <section
-        aria-label="De quem é a bola"
+        aria-label="Status do serviço"
         className={
-          bolaCliente
+          precisaAgir
             ? "rounded-xl border border-ambar-600/40 bg-ambar-500/10 p-5"
             : "rounded-xl border border-osso-200 bg-osso-100 p-5"
         }
       >
-        <p className="font-mono text-xs uppercase tracking-widest text-tinta-500">A bola está com</p>
-        <p className="mt-1 font-display text-2xl text-tinta-900">
-          {bolaCliente ? "Você" : "A oficina"}
-        </p>
-        <p className="mt-2 font-body text-sm text-tinta-500">
-          {bolaCliente
-            ? "Há um orçamento esperando a sua resposta. Aprove para o serviço seguir, ou recuse para renegociar."
-            : `${dados.pergunta.oQueFalta}. Em seguida: ${dados.pergunta.praOnde.toLowerCase()}.`}
-        </p>
+        <p className="font-mono text-xs uppercase tracking-widest text-tinta-500">Status do serviço</p>
+        <p className="mt-1 font-display text-2xl text-tinta-900">{status.rotulo}</p>
+        <p className="mt-2 font-body text-sm text-tinta-500">{status.detalhe}</p>
       </section>
 
       {/* Orçamento + decisão */}

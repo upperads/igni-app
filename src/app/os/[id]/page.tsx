@@ -11,6 +11,7 @@ import { MedidorEstado } from "@/ui/components/medidor-estado";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
 import { type Bola, Responsabilizacao } from "@/ui/components/responsabilizacao";
 import { AcoesOs } from "./acoes";
+import { AvisarWhatsapp } from "./avisar-whatsapp";
 import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
 
@@ -93,6 +94,14 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
           {os.cliente.nome} · {TIPO_CLIENTE_ROTULO[os.cliente.tipo] ?? os.cliente.tipo}
           {os.equipamento.placa ? ` · ${os.equipamento.placa}` : ""}
         </p>
+        <div className="mt-3">
+          <AvisarWhatsapp
+            numeroOs={os.numero}
+            equipamento={os.equipamento.tipo}
+            estado={os.estado}
+            whatsapp={os.cliente.whatsapp}
+          />
+        </div>
       </header>
 
       {/* O INSTRUMENTO: medidor de estado + responsabilização (o que salta primeiro) */}

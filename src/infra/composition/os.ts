@@ -458,7 +458,7 @@ export interface DetalheOs {
   travamentoResponsabilidade: Responsabilidade | null;
   cqAprovado: boolean;
   equipamento: { tipo: string; placa: string | null; chassi: string | null; modeloMotor: string | null };
-  cliente: { nome: string; tipo: string };
+  cliente: { nome: string; tipo: string; whatsapp: string | null };
   eventos: EventoOs[];
 }
 
@@ -485,6 +485,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
         modeloMotor: equipamento.modeloMotor,
         clienteNome: cliente.nome,
         clienteTipo: cliente.tipo,
+        clienteWhatsapp: cliente.contatoWhatsapp,
       })
       .from(os)
       .innerJoin(equipamento, eq(equipamento.id, os.equipamentoId))
@@ -528,7 +529,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
         chassi: linha.chassi,
         modeloMotor: linha.modeloMotor,
       },
-      cliente: { nome: linha.clienteNome, tipo: linha.clienteTipo },
+      cliente: { nome: linha.clienteNome, tipo: linha.clienteTipo, whatsapp: linha.clienteWhatsapp },
       eventos,
     };
   });
