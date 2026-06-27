@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { sair } from "@/app/logout/actions";
+import { pode } from "@/domain/auth/rbac";
+import { sessaoAtual } from "@/infra/auth/sessao";
 import { cn } from "@/ui/cn";
 import { RiskRail } from "./risk-rail";
 import { ToggleTema } from "./toggle-tema";
@@ -13,6 +15,12 @@ const NAV = [
   { href: "/relatorio", rotulo: "Relatório" },
   { href: "/painel/tv", rotulo: "Modo TV" },
   { href: "/primeiros-passos", rotulo: "Primeiros passos" },
+] as const;
+
+// Itens de configuração — só aparecem para quem pode configurar (dono/gestor).
+const NAV_CONFIG = [
+  { href: "/config/equipe", rotulo: "Equipe" },
+  { href: "/config/estacoes", rotulo: "Estações" },
 ] as const;
 
 // Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; o resto é de desktop.
@@ -30,9 +38,13 @@ interface Props {
 
 /**
  * Moldura do app interno: trilho de risco no topo, barra superior (desktop) e navegação inferior
- * na zona do polegar (mobile). O modo TV usa o conteúdo sem esta moldura.
+ * na zona do polegar (mobile). O modo TV usa o conteúdo sem esta moldura. Lê a sessão para mostrar
+ * os itens de configuração (Equipe/Estações) apenas a quem pode configurar — sem inflar cada página.
  */
-export function AppShell({ children, alarme = false, setor }: Props) {
+export async function AppShell({ children, alarme = false, setor }: Props) {
+  const sessao = await sessaoAtual();
+  const podeConfigurar = sessao ? pode(sessao.papel, "config:editar") : false;
+  const nav = podeConfigurar ? [...NAV, ...NAV_CONFIG] : NAV;
   return (
     <div className="flex min-h-dvh flex-col bg-grafite-900">
       <RiskRail alarme={alarme} />
@@ -48,7 +60,7 @@ export function AppShell({ children, alarme = false, setor }: Props) {
         </div>
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Navegação principal">
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <Link
               key={n.href}
               href={n.href}

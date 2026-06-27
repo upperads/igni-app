@@ -2,11 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CardPainelBump } from "@/app/_components/card-painel-bump";
 import { RealtimePainel } from "@/app/_components/realtime-painel";
+import { pode } from "@/domain/auth/rbac";
 import { sessaoAtual } from "@/infra/auth/sessao";
+import { estadoImplantacaoNoTenant } from "@/infra/composition/config";
 import { historicoResponsabilidade, listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { BarraResponsabilizacao } from "@/ui/components/barra-responsabilizacao";
 import { Button } from "@/ui/components/button";
+import { ComecePorAqui } from "@/ui/components/comece-por-aqui";
 import { KpiStat } from "@/ui/components/kpi-stat";
 
 export default async function Home() {
@@ -15,28 +18,39 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const [{ kpis, etapas }, historico] = await Promise.all([
+  // Onboarding só interessa a quem implanta (dono/gestor); produção/recepção vão direto à operação.
+  const podeConfigurar = pode(sessao.papel, "config:editar");
+  const [{ kpis, etapas }, historico, implantacao] = await Promise.all([
     listarPainel(sessao),
     historicoResponsabilidade(sessao, 30),
+    podeConfigurar
+      ? estadoImplantacaoNoTenant(sessao)
+      : Promise.resolve(null),
   ]);
   const alarme = kpis.paradaCritica > 0 || kpis.atraso.total > 0;
+  // Mostra o guia enquanto a oficina não começou a rodar (sem equipe E sem OS).
+  const mostrarGuia = implantacao !== null && implantacao.oficinaNova;
 
   return (
     <AppShell alarme={alarme}>
-      <Link
-        href="/primeiros-passos"
-        className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-ambar-600/40 bg-grafite-800 px-5 py-4 transition-colors hover:border-ambar-600/70"
-      >
-        <div>
-          <p className="font-display text-lg text-aco-100">Primeiros passos</p>
-          <p className="mt-0.5 font-body text-sm text-aco-400">
-            Novo por aqui? Veja como começar a usar o Igni, com calma.
-          </p>
-        </div>
-        <span className="shrink-0 font-mono text-sm text-ambar-500" aria-hidden>
-          Abrir →
-        </span>
-      </Link>
+      {mostrarGuia ? (
+        <ComecePorAqui estado={implantacao} />
+      ) : (
+        <Link
+          href="/primeiros-passos"
+          className="mb-6 flex items-center justify-between gap-4 rounded-lg border border-ambar-600/40 bg-grafite-800 px-5 py-4 transition-colors hover:border-ambar-600/70"
+        >
+          <div>
+            <p className="font-display text-lg text-aco-100">Primeiros passos</p>
+            <p className="mt-0.5 font-body text-sm text-aco-400">
+              Novo por aqui? Veja como começar a usar o Igni, com calma.
+            </p>
+          </div>
+          <span className="shrink-0 font-mono text-sm text-ambar-500" aria-hidden>
+            Abrir →
+          </span>
+        </Link>
+      )}
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>

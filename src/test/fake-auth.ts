@@ -1,4 +1,8 @@
-import type { AuthIdentityPort, CriarIdentidadeInput } from "@/application/ports/auth-identity";
+import type {
+  AuthIdentityPort,
+  CriarIdentidadeInput,
+  IdentidadeProvisoria,
+} from "@/application/ports/auth-identity";
 import { EmailJaCadastradoError } from "@/domain/shared/errors";
 
 /**
@@ -15,6 +19,16 @@ export class FakeAuthIdentity implements AuthIdentityPort {
   public readonly removidas: string[] = [];
 
   async criarIdentidade({ email }: CriarIdentidadeInput): Promise<string> {
+    return this.registrar(email);
+  }
+
+  async criarComSenhaProvisoria({ email }: { email: string }): Promise<IdentidadeProvisoria> {
+    const authUserId = await this.registrar(email);
+    return { authUserId, senhaProvisoria: `Igni-TEST-${this.seq}` };
+  }
+
+  /** Cria a identidade (compartilhado pelos dois construtores), lançando se o e-mail já existe. */
+  private registrar(email: string): string {
     const chave = email.trim().toLowerCase();
     if (this.idPorEmail.has(chave)) {
       throw new EmailJaCadastradoError(chave);

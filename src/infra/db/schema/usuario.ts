@@ -22,6 +22,9 @@ export const usuario = pgTable(
     email: text("email").notNull(),
     papel: papelUsuario("papel").notNull(),
     tfaAtivo: boolean("tfa_ativo").notNull().default(false),
+    // Convite de equipe (I1): membro desativado perde o acesso (a sessão deixa de resolver perfil)
+    // sem apagar a história. Nulo = ativo. Quem está fora da firma não entra mais.
+    desativadoEm: timestamp("desativado_em", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("usuario_email_unico").on(t.email)],
