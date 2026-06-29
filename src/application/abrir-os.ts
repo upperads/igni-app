@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { type ModalidadeEntrada, resolverDescricao } from "@/domain/os/entrada";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database, TenantTx } from "@/infra/db/connection";
 import { cliente, entrada, equipamento, evento, os, tenantContadorOs } from "@/infra/db/schema";
@@ -34,7 +35,9 @@ export interface AbrirOSInput {
     maquinaUnica?: boolean;
   };
   entrada: {
-    modalidade: "so_usinagem" | "empresa_retira" | "ja_desmontado";
+    modalidade: ModalidadeEntrada;
+    /** Texto livre, obrigatório quando modalidade = "outra"; ignorado nas demais. */
+    modalidadeDescricao?: string | null;
     pecasRecebidas?: unknown;
     fotos?: unknown;
   };
@@ -67,6 +70,14 @@ export async function abrirOS(
     throw new DadosInvalidosError("Tipo do equipamento é obrigatório.");
   }
 
+  // "Outra" modalidade exige o texto livre; as demais zeram a descrição.
+  let modalidadeDescricao: string | null;
+  try {
+    modalidadeDescricao = resolverDescricao(input.entrada.modalidade, input.entrada.modalidadeDescricao);
+  } catch {
+    throw new DadosInvalidosError("Descreva a modalidade de entrada personalizada.");
+  }
+
   return database.withTenant(sessao.tenantId, async (tx) => {
     const [cl] = await tx
       .insert(cliente)
@@ -97,6 +108,7 @@ export async function abrirOS(
         tenantId: sessao.tenantId,
         clienteId: cl!.id,
         modalidade: input.entrada.modalidade,
+        modalidadeDescricao,
         pecasRecebidas: input.entrada.pecasRecebidas,
         fotos: input.entrada.fotos,
       })

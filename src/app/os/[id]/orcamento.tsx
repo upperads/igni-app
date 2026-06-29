@@ -2,7 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { ROTULO_TIPO_ITEM, type StatusOrcamento, TIPOS_ITEM } from "@/domain/orcamento/orcamento";
+import {
+  type CanalAprovacao,
+  ROTULO_TIPO_ITEM,
+  type StatusOrcamento,
+  TIPOS_ITEM,
+} from "@/domain/orcamento/orcamento";
 import type { OrcamentoView } from "@/infra/composition/os";
 import {
   acaoAprovarOrcamento,
@@ -14,6 +19,7 @@ import {
 } from "../actions";
 import { Button } from "@/ui/components/button";
 import { INPUT_CLASS, LABEL_CLASS } from "@/ui/components/text-field";
+import { DecisaoOrcamento } from "./modal-aprovacao";
 
 const STATUS_ROTULO: Record<StatusOrcamento, string> = {
   rascunho: "Rascunho",
@@ -120,18 +126,11 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
         )}
 
         {podeEditar && status === "enviado" ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button disabled={pendente} onClick={() => rodar(() => acaoAprovarOrcamento(osId))}>
-              Aprovar
-            </Button>
-            <Button
-              variante="fantasma"
-              disabled={pendente}
-              onClick={() => rodar(() => acaoRecusarOrcamento(osId))}
-            >
-              Recusar
-            </Button>
-          </div>
+          <DecisaoOrcamento
+            pendente={pendente}
+            onAprovar={(canal: CanalAprovacao) => rodar(() => acaoAprovarOrcamento(osId, canal))}
+            onRecusar={() => rodar(() => acaoRecusarOrcamento(osId))}
+          />
         ) : null}
 
         {podeEditar && status === "recusado" ? (

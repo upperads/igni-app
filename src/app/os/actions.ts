@@ -5,8 +5,14 @@ import { revalidatePath } from "next/cache";
 import type { AbrirOSInput } from "@/application/abrir-os";
 import type { ItemEntrada } from "@/application/orcamento";
 import { type Acao, pode } from "@/domain/auth/rbac";
+import { modalidadeValida } from "@/domain/os/entrada";
 import type { EstadoOS } from "@/domain/os/estado";
-import { type TipoItem, TIPOS_ITEM } from "@/domain/orcamento/orcamento";
+import {
+  type CanalAprovacao,
+  CANAIS_APROVACAO,
+  type TipoItem,
+  TIPOS_ITEM,
+} from "@/domain/orcamento/orcamento";
 import {
   PRIORIDADES,
   type Prioridade,
@@ -53,10 +59,8 @@ function revalidarOs(osId: string): void {
 }
 
 const TIPOS_CLIENTE = ["frota", "produtor", "avulso"] as const;
-const MODALIDADES = ["so_usinagem", "empresa_retira", "ja_desmontado"] as const;
 
 type TipoCliente = (typeof TIPOS_CLIENTE)[number];
-type Modalidade = (typeof MODALIDADES)[number];
 
 function vazioParaNulo(valor: string): string | null {
   const limpo = valor.trim();
@@ -83,7 +87,7 @@ export async function acaoAbrirOs(
   if (!TIPOS_CLIENTE.includes(tipoCliente as TipoCliente)) {
     return { erro: "Selecione um tipo de cliente válido." };
   }
-  if (!MODALIDADES.includes(modalidade as Modalidade)) {
+  if (!modalidadeValida(modalidade)) {
     return { erro: "Selecione uma modalidade de entrada válida." };
   }
 
@@ -98,7 +102,10 @@ export async function acaoAbrirOs(
       placa: vazioParaNulo(String(formData.get("placa") ?? "")),
       modeloMotor: vazioParaNulo(String(formData.get("modeloMotor") ?? "")),
     },
-    entrada: { modalidade: modalidade as Modalidade },
+    entrada: {
+      modalidade,
+      modalidadeDescricao: vazioParaNulo(String(formData.get("modalidadeDescricao") ?? "")),
+    },
     tipoServico: vazioParaNulo(String(formData.get("tipoServico") ?? "")),
   };
 
@@ -349,11 +356,21 @@ async function decidirOrcamento(
   }
 }
 
-/** US-12/14 — aprovação interna (cliente aprovou por telefone). Libera o gate de execução. */
-export async function acaoAprovarOrcamento(osId: string): Promise<ResultadoAcao> {
+/**
+ * US-12/14 — aprovação interna: o cliente aprovou por fora (telefone/pessoalmente/WhatsApp) e a
+ * operação registra. O `canal` documenta COMO, gravando um evento na linha do tempo (mantém a
+ * responsabilização honesta). Libera o gate de execução.
+ */
+export async function acaoAprovarOrcamento(
+  osId: string,
+  canal: string,
+): Promise<ResultadoAcao> {
+  if (!CANAIS_APROVACAO.includes(canal as CanalAprovacao)) {
+    return { ok: false, motivo: "Diga como o cliente aprovou (telefone, pessoalmente ou WhatsApp)." };
+  }
   return decidirOrcamento(
     osId,
-    (s) => aprovarOrcamentoNoTenant(s, osId),
+    (s) => aprovarOrcamentoNoTenant(s, osId, canal as CanalAprovacao),
     "Não foi possível aprovar o orçamento.",
   );
 }

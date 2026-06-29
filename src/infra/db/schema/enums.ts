@@ -28,11 +28,17 @@ export const estadoOs = pgEnum("estado_os", [
   "entregue",
 ]);
 
-/** Modalidade de entrada (A/B/C do PRD): só usinagem · empresa retira · cliente entrega desmontado. */
+/**
+ * Modalidade de entrada. Base A/B/C do PRD (só usinagem · empresa retira · cliente entrega
+ * desmontado) + `patio_oficina` (equipamento já no pátio, fixo pedido pela operação) + `outra`
+ * (modalidade personalizada — o texto livre vai em `entrada.modalidade_descricao`).
+ */
 export const modalidadeEntrada = pgEnum("modalidade_entrada", [
   "so_usinagem",
   "empresa_retira",
   "ja_desmontado",
+  "patio_oficina",
+  "outra",
 ]);
 
 /** Tipo de cliente (P4 do PRD). */

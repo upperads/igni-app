@@ -113,6 +113,13 @@
       "when": 1782597923035,
       "tag": "0015_closed_marauders",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1782768805570,
+      "tag": "0016_lucky_demogoblin",
+      "breakpoints": true
     }
   ]
 }

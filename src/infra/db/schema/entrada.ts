@@ -1,4 +1,4 @@
-import { jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { cliente } from "./cliente";
 import { modalidadeEntrada } from "./enums";
 import { tenant } from "./tenant";
@@ -13,6 +13,8 @@ export const entrada = pgTable("entrada", {
     .notNull()
     .references(() => cliente.id, { onDelete: "restrict" }),
   modalidade: modalidadeEntrada("modalidade").notNull(),
+  // Texto livre da modalidade personalizada (só quando `modalidade = 'outra'`). Nulo nas demais.
+  modalidadeDescricao: text("modalidade_descricao"),
   pecasRecebidas: jsonb("pecas_recebidas"),
   fotos: jsonb("fotos"),
   dataEntrada: timestamp("data_entrada", { withTimezone: true }).notNull().defaultNow(),

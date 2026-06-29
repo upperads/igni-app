@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
+import { MODALIDADES_ENTRADA, ROTULO_MODALIDADE } from "@/domain/os/entrada";
 import { Button } from "@/ui/components/button";
 import { INPUT_CLASS, LABEL_CLASS, TextField } from "@/ui/components/text-field";
 import { acaoAbrirOs, type EstadoAbrirOs } from "../actions";
@@ -11,16 +12,11 @@ const TIPOS_CLIENTE = [
   { valor: "avulso", rotulo: "Avulso" },
 ] as const;
 
-const MODALIDADES = [
-  { valor: "so_usinagem", rotulo: "Só usinagem (cliente desmonta e traz as peças)" },
-  { valor: "empresa_retira", rotulo: "Empresa retira (a oficina busca o equipamento)" },
-  { valor: "ja_desmontado", rotulo: "Já desmontado (cliente entrega desmontado)" },
-] as const;
-
 const INICIAL: EstadoAbrirOs = {};
 
 export function FormAbrirOs() {
   const [estado, acao, pendente] = useActionState(acaoAbrirOs, INICIAL);
+  const [modalidade, setModalidade] = useState<string>("so_usinagem");
 
   return (
     <form action={acao} className="flex flex-col gap-6">
@@ -75,16 +71,27 @@ export function FormAbrirOs() {
             id="modalidade"
             name="modalidade"
             required
-            defaultValue="so_usinagem"
+            value={modalidade}
+            onChange={(e) => setModalidade(e.target.value)}
             className={INPUT_CLASS}
           >
-            {MODALIDADES.map((m) => (
-              <option key={m.valor} value={m.valor}>
-                {m.rotulo}
+            {MODALIDADES_ENTRADA.map((m) => (
+              <option key={m} value={m}>
+                {ROTULO_MODALIDADE[m]}
               </option>
             ))}
           </select>
         </div>
+
+        {modalidade === "outra" ? (
+          <TextField
+            label="Qual a modalidade?"
+            name="modalidadeDescricao"
+            required
+            placeholder="Ex.: Guincho parceiro trouxe; cliente acompanha"
+          />
+        ) : null}
+
         <TextField
           label="Serviço pedido (opcional)"
           name="tipoServico"

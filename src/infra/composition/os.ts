@@ -48,6 +48,7 @@ import {
   type Responsabilidade,
 } from "@/domain/os/triagem";
 import {
+  type CanalAprovacao,
   type StatusOrcamento,
   type TipoItem,
   calcularOrcamento,
@@ -156,8 +157,12 @@ export async function enviarOrcamentoNoTenant(
   return r;
 }
 
-export async function aprovarOrcamentoNoTenant(sessao: SessaoTenant, osId: string): Promise<void> {
-  await aprovarOrcamento(database, sessao, osId);
+export async function aprovarOrcamentoNoTenant(
+  sessao: SessaoTenant,
+  osId: string,
+  canal?: CanalAprovacao,
+): Promise<void> {
+  await aprovarOrcamento(database, sessao, osId, canal);
   await recalcularPrioridade(database, sessao, osId);
   await notificarPainel(sessao.tenantId);
 }

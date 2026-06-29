@@ -2,6 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { ContextoTransicao, EstadoOS } from "@/domain/os/estado";
 import {
+  type CanalAprovacao,
+  motivoAprovacaoInterna,
   podeDecidir,
   podeEditarItens,
   podeEnviar,
@@ -137,11 +139,18 @@ async function exigirOrcamentoDecidivel(
   return { id: orc.id };
 }
 
-/** US-12/14 — aprova o orçamento (libera o gate de execução). Não avança a OS (pode ir a peça ou execução). */
+/**
+ * US-12/14 — aprova o orçamento (libera o gate de execução). Não avança a OS (pode ir a peça ou
+ * execução). Quem aprova é a OPERAÇÃO (cliente aprovou por fora); o `canal` documenta COMO o cliente
+ * aprovou e grava um evento na linha do tempo — a aprovação interna deixa de ser invisível, o que
+ * preserva a responsabilização honesta (fica registrado que esperamos o cliente até aqui).
+ * Sem `canal` (ex.: aprovação pelo portal do próprio cliente), não grava evento de canal.
+ */
 export function aprovarOrcamento(
   database: Database,
   sessao: SessaoTenant,
   osId: string,
+  canal?: CanalAprovacao,
 ): Promise<void> {
   return database.withTenant(sessao.tenantId, async (tx) => {
     const orc = await exigirOrcamentoDecidivel(tx, osId);
@@ -149,6 +158,20 @@ export function aprovarOrcamento(
       .update(orcamento)
       .set({ status: "aprovado", aprovadoEm: new Date() })
       .where(eq(orcamento.id, orc.id));
+
+    if (canal) {
+      const [ordem] = await tx.select({ estado: os.estado }).from(os).where(eq(os.id, osId)).limit(1);
+      if (ordem) {
+        await tx.insert(evento).values({
+          tenantId: sessao.tenantId,
+          osId,
+          deEstado: ordem.estado,
+          paraEstado: ordem.estado,
+          porUsuarioId: sessao.usuarioId,
+          motivo: motivoAprovacaoInterna(canal),
+        });
+      }
+    }
   });
 }
 

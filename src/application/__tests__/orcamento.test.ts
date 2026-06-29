@@ -120,6 +120,31 @@ describe("orçamento — casos de uso e gates reais (US-12/14)", () => {
     expect(liberado.ok).toBe(true);
   });
 
+  it("aprovação interna com canal grava um evento na linha do tempo (responsabilização honesta)", async () => {
+    const osId = await ateAguardandoAprovacao();
+    await enviarOrcamento(database, sessao, osId);
+
+    const antes = await database.db.select().from(evento).where(eq(evento.osId, osId));
+    await aprovarOrcamento(database, sessao, osId, "whatsapp");
+    const depois = await database.db.select().from(evento).where(eq(evento.osId, osId));
+
+    expect(depois.length).toBe(antes.length + 1);
+    const novo = depois.find((e) => !antes.some((a) => a.id === e.id));
+    expect(novo?.motivo).toMatch(/aprovado pelo cliente por WhatsApp/i);
+    expect(novo?.origem).toBe("escritorio");
+  });
+
+  it("aprovação SEM canal (ex.: portal do cliente) não grava evento de canal", async () => {
+    const osId = await ateAguardandoAprovacao();
+    await enviarOrcamento(database, sessao, osId);
+
+    const antes = await database.db.select().from(evento).where(eq(evento.osId, osId));
+    await aprovarOrcamento(database, sessao, osId);
+    const depois = await database.db.select().from(evento).where(eq(evento.osId, osId));
+
+    expect(depois.length).toBe(antes.length);
+  });
+
   it("recusar volta a OS a diagnóstico", async () => {
     const osId = await ateAguardandoAprovacao();
     await enviarOrcamento(database, sessao, osId);

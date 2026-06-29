@@ -15,6 +15,24 @@ export const ROTULO_TIPO_ITEM: Record<TipoItem, string> = {
   terceiro: "Terceiro",
 };
 
+/**
+ * Como o cliente aprovou, quando quem REGISTRA é a operação (não o cliente pelo portal). Mantém a
+ * responsabilização honesta: a aprovação interna fica documentada com o canal, não some da história.
+ */
+export const CANAIS_APROVACAO = ["telefone", "pessoalmente", "whatsapp"] as const;
+export type CanalAprovacao = (typeof CANAIS_APROVACAO)[number];
+
+export const ROTULO_CANAL_APROVACAO: Record<CanalAprovacao, string> = {
+  telefone: "por telefone",
+  pessoalmente: "pessoalmente",
+  whatsapp: "por WhatsApp",
+};
+
+/** Frase do evento da linha do tempo para a aprovação registrada pela operação. */
+export function motivoAprovacaoInterna(canal: CanalAprovacao): string {
+  return `Orçamento aprovado pelo cliente ${ROTULO_CANAL_APROVACAO[canal]}, registrado pela operação.`;
+}
+
 /** Itens só se editam no rascunho. */
 export function podeEditarItens(status: StatusOrcamento): boolean {
   return status === "rascunho";
