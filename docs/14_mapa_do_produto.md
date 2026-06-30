@@ -51,8 +51,8 @@ restam P1/P2.
 | **I3** | **Painel vazio no 1º acesso** | ✅ **FEITO** — vira "Comece por aqui" (3 passos com checkmarks) enquanto a oficina é nova; some quando começa a rodar | `/` (só dono/gestor) |
 | **I4** | **Primeiros-passos era só TEXTO** | ✅ **resolvido pelo I3** — o guia agora tem os botões reais (equipe, estações, 1ª OS). O `/primeiros-passos` em prosa segue como leitura calma | `ComecePorAqui` |
 | **I5** | **Dados de exemplo (seed de demo)** | ✅ **FEITO** — "Preencher com exemplo" cria um cenário de venda completo (8 OS por todos os estados, orçamentos, histórico que enche o relatório); marcado `is_demo` e reversível ("Limpar demonstração"), sem sujar o banco real | `ComecePorAqui` + `/config/demonstracao` |
-| **I6** | **Cadastro de Clientes/Equipamentos como entidade** | ⏳ P2 — cliente ainda nasce escondido no "abrir OS" | Tabelas existem; sem tela |
-| **I7** | **Atribuir OS a uma estação física** | ⏳ P2 — `/chao` agrupa por ESTADO (lógico), não por estação | `os.estacao_id` existe, nunca preenchido |
+| **I6** | **Cadastro de Clientes como entidade** | ✅ **FEITO** — abrir OS REUSA o cliente pelo WhatsApp normalizado (não duplica); telas `/clientes` (listar/buscar, nº de OS) e `/clientes/[id]` (histórico) | `/clientes` + `domain/os/cliente.ts` |
+| **I7** | **Atribuir OS a uma estação física** | ✅ **FEITO** — seletor de estação no detalhe da OS (`os.estacao_id`); `/chao` ganhou toggle "Por etapa / Por estação" | `/os/[id]` + `/chao?por=estacao` |
 | **I8** | **Convite por LINK de e-mail** (em vez de senha provisória) | ⏳ P1 — depende de **SMTP cloud** (pendência técnica conhecida). A porta de auth já isola isto; ver §9 | gancho pronto |
 
 ## 5. O que isto significa pra "levar a uma retífica" (a resposta direta)

@@ -83,4 +83,9 @@
   - ✅ *Limpeza reversível*: `limparDemonstracao` apaga só `is_demo` na ordem das FKs (OS → cascade em orçamento/itens/eventos; depois entrada/equipamento/cliente órfãos). Idempotente. **Nunca toca dado real.**
   - ✅ *UI*: no card "Comece por aqui" (só dono/gestor) — "Preencher com exemplo" quando vazio; "Limpar demonstração" (com confirmação) quando há demo; o card reaparece enquanto houver demo pra não perder o botão de limpar.
   - *Verificação*: **CI verde** no `757b5e2` (testes de seed/isolamento A-B/limpar-preserva-real no Postgres limpo); migration 0017 aplicada e verificada no cloud; deploy + smoke OK.
-- **Última atualização**: 30/06 (P2 seed de demonstração — ver/vender o app cheio, reversível)
+- **P2 — Clientes (I6) + Estação física (I7)** ✅ *no ar* (30/06, commit `307c2f2`) — fecha o P2 da Fase de Implantação.
+  - ✅ *I6 — Reuso de cliente*: ao abrir OS, o Igni REUSA o cliente pelo **WhatsApp normalizado** (`domain/os/cliente.ts`: mesmo número em qualquer formato casa) em vez de duplicar; nome/tipo mais recentes prevalecem; sem WhatsApp, cria. Telas `/clientes` (listar + buscar por nome/WhatsApp, com nº de OS) e `/clientes/[id]` (histórico de OS). Item "Clientes" na nav.
+  - ✅ *I7 — Estação física na OS*: a OS ganha o **posto no chão** (`os.estacao_id`, coluna que existia e nunca era usada), separado do ESTADO lógico. Seletor no detalhe da OS (`os:editar`); o `/chao` ganhou toggle **"Por etapa / Por estação"** (agrupa por posto, com "Sem estação" no fim).
+  - *Sem migration* (usa colunas pré-existentes). **CI pegou 2 bugs antes do deploy**: ordem de delete num teste (FK entrada→cliente) e — real, de produção — a **busca por nome trazia todos** (termo sem dígitos virava `%%` no filtro de WhatsApp); ambos corrigidos. **CI verde** no `307c2f2`; deploy + smoke OK.
+  - **Fase de Implantação COMPLETA**: P0 (equipe+estações+onboarding) + P1-parcial + P2 (seed I5 + clientes I6 + estação I7). Resta só **I8** (convite por link de e-mail, depende de SMTP cloud).
+- **Última atualização**: 30/06 (P2 completo: clientes com reuso + estação física na OS)
