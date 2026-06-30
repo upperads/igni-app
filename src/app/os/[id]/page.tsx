@@ -5,6 +5,7 @@ import { proximosEstados, quatroPerguntas, rotuloEstado } from "@/domain/os/esta
 import { sinalDaOs } from "@/domain/os/painel";
 import { diasRestantesAte } from "@/domain/os/triagem";
 import { sessaoAtual } from "@/infra/auth/sessao";
+import { listarEstacoesNoTenant } from "@/infra/composition/config";
 import { type DetalheOs, detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { MedidorEstado } from "@/ui/components/medidor-estado";
@@ -12,6 +13,7 @@ import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
 import { type Bola, Responsabilizacao } from "@/ui/components/responsabilizacao";
 import { AcoesOs } from "./acoes";
 import { AvisarWhatsapp } from "./avisar-whatsapp";
+import { EstacaoFisica } from "./estacao-fisica";
 import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
 
@@ -59,8 +61,12 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
-  const orcamento = await orcamentoDaOs(sessao, id);
+  const [orcamento, estacoes] = await Promise.all([
+    orcamentoDaOs(sessao, id),
+    listarEstacoesNoTenant(sessao),
+  ]);
   const podeEditarOrcamento = pode(sessao.papel, "orcamento:editar");
+  const podeEditarOs = pode(sessao.papel, "os:editar");
   const proximos = proximosEstados(os.estado);
   const perguntas = quatroPerguntas(os.estado);
   const diasRestantes = diasRestantesAte(os.prazoPrometido, new Date());
@@ -155,6 +161,11 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
             temOverride={os.prioridadeOverride !== null}
             travado={os.travado}
           />
+          {podeEditarOs ? (
+            <div className="mt-4 rounded-md border border-grafite-700 bg-grafite-800 p-4">
+              <EstacaoFisica osId={os.id} estacaoId={os.estacaoId} estacoes={estacoes} />
+            </div>
+          ) : null}
         </section>
       </div>
 

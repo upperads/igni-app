@@ -21,6 +21,7 @@ import {
 } from "@/domain/os/triagem";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
+import { atribuirEstacaoNoTenant } from "@/infra/composition/config";
 import {
   abrirOsNoTenant,
   ajustarPrioridadeNoTenant,
@@ -207,6 +208,28 @@ export async function acaoTravar(
     return { ok: true };
   } catch {
     return { ok: false, motivo: "Não foi possível travar a OS. Tente novamente." };
+  }
+}
+
+/** I7 — atribui (ou tira, com estacaoId vazio) a estação física onde a OS está no chão. */
+export async function acaoAtribuirEstacao(
+  osId: string,
+  estacaoId: string,
+): Promise<ResultadoAcao> {
+  const auth = await autorizar("os:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await atribuirEstacaoNoTenant(auth.sessao, osId, estacaoId === "" ? null : estacaoId);
+    revalidarOs(osId);
+    revalidatePath("/chao");
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível mudar a estação. Tente novamente." };
   }
 }
 

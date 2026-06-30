@@ -83,6 +83,32 @@ export function reordenarEstacoes(
 }
 
 /**
+ * Atribui (ou desatribui) a ESTAÇÃO FÍSICA de uma OS (I7): em qual posto do chão o trabalho está
+ * fisicamente. Diferente do ESTADO (lógico, da máquina de estados). `estacaoId = null` desatribui.
+ * Valida que a estação pertence ao tenant (RLS já protege; a checagem dá erro claro em vez de FK).
+ */
+export function atribuirEstacaoAOs(
+  database: Database,
+  sessao: SessaoTenant,
+  osId: string,
+  estacaoId: string | null,
+): Promise<void> {
+  return database.withTenant(sessao.tenantId, async (tx) => {
+    if (estacaoId !== null) {
+      const [est] = await tx
+        .select({ id: estacao.id })
+        .from(estacao)
+        .where(eq(estacao.id, estacaoId))
+        .limit(1);
+      if (!est) {
+        throw new DadosInvalidosError("Estação não encontrada.");
+      }
+    }
+    await tx.update(os).set({ estacaoId }).where(eq(os.id, osId));
+  });
+}
+
+/**
  * Remove uma estação. Bloqueia se houver OS apontando para ela (FK lógica via `os.estacaoId`):
  * preservar a história importa mais que apagar. Sem OS vinculada, remove.
  */

@@ -12,6 +12,7 @@ const NAV = [
   { href: "/chao", rotulo: "Chão" },
   { href: "/triagem", rotulo: "Triagem" },
   { href: "/os", rotulo: "OS" },
+  { href: "/clientes", rotulo: "Clientes" },
   { href: "/relatorio", rotulo: "Relatório" },
   { href: "/painel/tv", rotulo: "Modo TV" },
   { href: "/primeiros-passos", rotulo: "Primeiros passos" },

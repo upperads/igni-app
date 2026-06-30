@@ -1,5 +1,6 @@
 import {
   adicionarEstacao,
+  atribuirEstacaoAOs,
   type EstacaoView,
   listarEstacoes,
   removerEstacao,
@@ -60,6 +61,16 @@ export function reordenarEstacoesNoTenant(
 
 export function removerEstacaoNoTenant(sessao: SessaoTenant, estacaoId: string): Promise<void> {
   return removerEstacao(database, sessao, estacaoId);
+}
+
+/** Atribui/desatribui a estação física de uma OS (I7) e atualiza o painel ao vivo. */
+export async function atribuirEstacaoNoTenant(
+  sessao: SessaoTenant,
+  osId: string,
+  estacaoId: string | null,
+): Promise<void> {
+  await atribuirEstacaoAOs(database, sessao, osId, estacaoId);
+  await notificarPainel(sessao.tenantId);
 }
 
 // --- Demonstração (I5) — preencher/limpar o cenário de venda, notificando o painel ao vivo ---

@@ -59,6 +59,7 @@ import {
   cliente,
   entrada,
   equipamento,
+  estacao,
   evento,
   orcamento,
   orcamentoItem,
@@ -321,6 +322,9 @@ export interface CardPainel {
   prazoLabel: string;
   travado: boolean;
   travamentoResponsabilidade: Responsabilidade | null;
+  /** Estação física onde a OS está no chão (I7). Null = sem posto. */
+  estacaoId: string | null;
+  estacaoNome: string | null;
   /** Destino do "bump" (único passo adiante) ou null se há decisão/fim. */
   proximoBump: EstadoOS | null;
 }
@@ -374,11 +378,14 @@ export async function listarPainel(
         travado: os.travado,
         travamentoResponsabilidade: os.travamentoResponsabilidade,
         prazoPrometido: os.prazoPrometido,
+        estacaoId: os.estacaoId,
+        estacaoNome: estacao.nome,
         criadoEm: os.createdAt,
       })
       .from(os)
       .innerJoin(equipamento, eq(equipamento.id, os.equipamentoId))
       .leftJoin(usuario, eq(usuario.id, os.responsavelId))
+      .leftJoin(estacao, eq(estacao.id, os.estacaoId))
       .where(ne(os.estado, "entregue")),
   );
 
@@ -401,28 +408,82 @@ export async function listarPainel(
     })),
   );
 
+  const cards = enriquecidas.map(montarCardPainel);
+
   const etapas: EtapaPainel[] = ESTADOS_OS.filter((e) => e !== "entregue")
     .map((estado) => ({
       estado,
       rotulo: rotuloEstado(estado),
-      cards: enriquecidas
-        .filter((l) => l.estado === estado)
-        .map<CardPainel>((l) => ({
-          id: l.id,
-          codigo: codigoOs(l.numero),
-          equipamento: l.equipamento,
-          responsavel: l.responsavel,
-          estado: l.estado,
-          sinal: l.sinal,
-          prazoLabel: prazoLabel(l.diasRestantes),
-          travado: l.travado,
-          travamentoResponsabilidade: l.travamentoResponsabilidade,
-          proximoBump: proximoBump(l.estado),
-        })),
+      cards: cards.filter((c) => c.estado === estado),
     }))
     .filter((etapa) => etapa.cards.length > 0);
 
   return { kpis, etapas };
+}
+
+/** Linha enriquecida do painel → card de UI. Compartilhado entre o agrupamento por estado e por estação. */
+function montarCardPainel(l: {
+  id: string;
+  numero: number;
+  equipamento: string;
+  responsavel: string | null;
+  estado: EstadoOS;
+  sinal: Sinal;
+  diasRestantes: number | null;
+  travado: boolean;
+  travamentoResponsabilidade: Responsabilidade | null;
+  estacaoId: string | null;
+  estacaoNome: string | null;
+}): CardPainel {
+  return {
+    id: l.id,
+    codigo: codigoOs(l.numero),
+    equipamento: l.equipamento,
+    responsavel: l.responsavel,
+    estado: l.estado,
+    sinal: l.sinal,
+    prazoLabel: prazoLabel(l.diasRestantes),
+    travado: l.travado,
+    travamentoResponsabilidade: l.travamentoResponsabilidade,
+    estacaoId: l.estacaoId,
+    estacaoNome: l.estacaoNome,
+    proximoBump: proximoBump(l.estado),
+  };
+}
+
+export interface GrupoEstacao {
+  estacaoId: string | null;
+  rotulo: string;
+  cards: CardPainel[];
+}
+
+/**
+ * Painel do CHÃO agrupado por ESTAÇÃO FÍSICA (I7) — onde o trabalho está no chão, não em que etapa
+ * lógica está. Mesmas OS ativas do painel; agrupa por `estacaoId` na ordem das estações, com um grupo
+ * "Sem estação" no fim. Para o quiosque do chão poder organizar por posto.
+ */
+export async function listarChaoPorEstacao(
+  sessao: SessaoTenant,
+  agora: Date = new Date(),
+): Promise<{ grupos: GrupoEstacao[] }> {
+  const [{ etapas }, estacoes] = await Promise.all([
+    listarPainel(sessao, agora),
+    database.withTenant(sessao.tenantId, (tx) =>
+      tx.select({ id: estacao.id, nome: estacao.nome, ordem: estacao.ordem }).from(estacao).orderBy(estacao.ordem),
+    ),
+  ]);
+  const cards = etapas.flatMap((e) => e.cards);
+
+  const grupos: GrupoEstacao[] = estacoes.map((est) => ({
+    estacaoId: est.id,
+    rotulo: est.nome,
+    cards: cards.filter((c) => c.estacaoId === est.id),
+  }));
+  const semEstacao = cards.filter((c) => c.estacaoId === null);
+  if (semEstacao.length > 0) {
+    grupos.push({ estacaoId: null, rotulo: "Sem estação", cards: semEstacao });
+  }
+  return { grupos: grupos.filter((g) => g.cards.length > 0) };
 }
 
 /**
@@ -482,6 +543,8 @@ export interface DetalheOs {
   travamentoMotivo: string | null;
   travamentoResponsabilidade: Responsabilidade | null;
   cqAprovado: boolean;
+  /** Estação física onde a OS está no chão (I7). Null = sem posto atribuído. */
+  estacaoId: string | null;
   equipamento: { tipo: string; placa: string | null; chassi: string | null; modeloMotor: string | null };
   cliente: { nome: string; tipo: string; whatsapp: string | null };
   eventos: EventoOs[];
@@ -504,6 +567,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
         travamentoMotivo: os.travamentoMotivo,
         travamentoResponsabilidade: os.travamentoResponsabilidade,
         cqAprovado: os.cqAprovado,
+        estacaoId: os.estacaoId,
         equipTipo: equipamento.tipo,
         placa: equipamento.placa,
         chassi: equipamento.chassi,
@@ -548,6 +612,7 @@ export async function detalheOs(sessao: SessaoTenant, osId: string): Promise<Det
       travamentoMotivo: linha.travamentoMotivo,
       travamentoResponsabilidade: linha.travamentoResponsabilidade,
       cqAprovado: linha.cqAprovado,
+      estacaoId: linha.estacaoId,
       equipamento: {
         tipo: linha.equipTipo,
         placa: linha.placa,

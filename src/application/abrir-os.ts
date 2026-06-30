@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import { normalizarWhatsapp } from "@/domain/os/cliente";
 import { type ModalidadeEntrada, resolverDescricao } from "@/domain/os/entrada";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database, TenantTx } from "@/infra/db/connection";
@@ -78,16 +79,41 @@ export async function abrirOS(
     throw new DadosInvalidosError("Descreva a modalidade de entrada personalizada.");
   }
 
+  // Reuso de cliente (I6): mesmo WhatsApp normalizado → mesmo cliente, em vez de duplicar a cada OS.
+  const whatsapp = normalizarWhatsapp(input.cliente.contatoWhatsapp);
+
   return database.withTenant(sessao.tenantId, async (tx) => {
-    const [cl] = await tx
-      .insert(cliente)
-      .values({
-        tenantId: sessao.tenantId,
-        nome: nomeCliente,
-        contatoWhatsapp: input.cliente.contatoWhatsapp,
-        tipo: input.cliente.tipo,
-      })
-      .returning({ id: cliente.id });
+    let clienteId: string;
+    const existente = whatsapp
+      ? (
+          await tx
+            .select({ id: cliente.id })
+            .from(cliente)
+            .where(eq(cliente.contatoWhatsapp, whatsapp))
+            .limit(1)
+        )[0]
+      : undefined;
+
+    if (existente) {
+      // Mantém o cadastro vivo: nome/tipo mais recentes prevalecem (sem criar duplicata).
+      clienteId = existente.id;
+      await tx
+        .update(cliente)
+        .set({ nome: nomeCliente, tipo: input.cliente.tipo })
+        .where(eq(cliente.id, existente.id));
+    } else {
+      const [cl] = await tx
+        .insert(cliente)
+        .values({
+          tenantId: sessao.tenantId,
+          nome: nomeCliente,
+          contatoWhatsapp: whatsapp,
+          tipo: input.cliente.tipo,
+        })
+        .returning({ id: cliente.id });
+      clienteId = cl!.id;
+    }
+    const cl = { id: clienteId };
 
     const [equip] = await tx
       .insert(equipamento)
