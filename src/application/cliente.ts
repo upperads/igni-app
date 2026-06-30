@@ -44,9 +44,13 @@ export function listarClientes(
       .orderBy(desc(cliente.createdAt));
 
     if (t.length > 0) {
-      return base.where(
-        or(ilike(cliente.nome, `%${t}%`), ilike(cliente.contatoWhatsapp, `%${t.replace(/\D/g, "")}%`)),
-      );
+      const filtros = [ilike(cliente.nome, `%${t}%`)];
+      // Só casa por WhatsApp quando o termo TEM dígitos — senão `%%` pegaria todo mundo.
+      const digitos = t.replace(/\D/g, "");
+      if (digitos.length > 0) {
+        filtros.push(ilike(cliente.contatoWhatsapp, `%${digitos}%`));
+      }
+      return base.where(or(...filtros));
     }
     return base;
   });
