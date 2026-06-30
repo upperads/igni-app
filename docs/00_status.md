@@ -77,4 +77,10 @@
   - ✅ *Modalidade de entrada flexível*: **"Pátio da oficina"** fixa + **"Outra"** com texto livre (`entrada.modalidade_descricao`). Domínio `domain/os/entrada.ts` (rótulos, validação, teste de drift do enum). Migration **0016** (`ALTER TYPE ADD VALUE` + `ADD COLUMN`, ambos seguros; aplicada e verificada no cloud).
   - ✅ *Navegação mais rápida*: `sessaoAtual` memoizado com **`React.cache`** — a página E a `AppShell` deixam de resolver a sessão 2× por request (`getUser` na rede + query de perfil). Corrige a lentidão introduzida ao tornar a `AppShell` async no P0.
   - *Verificação*: typecheck/lint/build verdes; **CI verde no GitHub** (testes no Postgres limpo — o Docker local estava instável); migration 0016 aplicada no cloud; deploy + smoke OK.
-- **Última atualização**: 29/06 (melhorias da operação: aprovação interna honesta + card na TV + modalidade flexível + nav mais rápida)
+- **P2 — Seed de demonstração (I5)** ✅ *no ar* (30/06, commit `757b5e2`) — "ver/vender o app cheio" sem dado real.
+  - ✅ *Marcado e reversível*: flag `is_demo` em `os` e `evento` (migration **0017**, `ADD COLUMN` default false — segura em prod). A flag **não filtra leitura** (na demo o dono quer ver tudo cheio); serve só para a limpeza cirúrgica.
+  - ✅ *Cenário de venda completo* (`application/demonstracao.ts`): **8 OS** por todos os estados (aberta→entregue), com crítico/atraso/travado, orçamentos, e **histórico passado datado** que enche o relatório (responsabilização: esperas cliente/peça/nossa; adoção do chão: avanços `origem='chao'`). Escreve direto (não simula transições) pra datar eventos no passado e deixar OS em estados finais.
+  - ✅ *Limpeza reversível*: `limparDemonstracao` apaga só `is_demo` na ordem das FKs (OS → cascade em orçamento/itens/eventos; depois entrada/equipamento/cliente órfãos). Idempotente. **Nunca toca dado real.**
+  - ✅ *UI*: no card "Comece por aqui" (só dono/gestor) — "Preencher com exemplo" quando vazio; "Limpar demonstração" (com confirmação) quando há demo; o card reaparece enquanto houver demo pra não perder o botão de limpar.
+  - *Verificação*: **CI verde** no `757b5e2` (testes de seed/isolamento A-B/limpar-preserva-real no Postgres limpo); migration 0017 aplicada e verificada no cloud; deploy + smoke OK.
+- **Última atualização**: 30/06 (P2 seed de demonstração — ver/vender o app cheio, reversível)
