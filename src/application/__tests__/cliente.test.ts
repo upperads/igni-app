@@ -4,7 +4,7 @@ import { abrirOS, type AbrirOSInput, type SessaoTenant } from "@/application/abr
 import { detalheCliente, listarClientes } from "@/application/cliente";
 import { atribuirEstacaoAOs } from "@/application/estacao";
 import type { Database } from "@/infra/db/connection";
-import { cliente, estacao, os, tenant, usuario } from "@/infra/db/schema";
+import { cliente, entrada, equipamento, estacao, os, tenant, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
 function input(nome: string, whatsapp?: string, equip = "Motor"): AbrirOSInput {
@@ -30,7 +30,10 @@ describe("clientes (I6) — reuso, listagem, isolamento", () => {
   });
 
   beforeEach(async () => {
+    // Ordem das FKs: OS referencia entrada/equipamento (restrict); entrada/equipamento referenciam cliente.
     await database.db.delete(os);
+    await database.db.delete(entrada);
+    await database.db.delete(equipamento);
     await database.db.delete(estacao);
     await database.db.delete(cliente);
     await database.db.delete(usuario);
@@ -101,44 +104,19 @@ describe("clientes (I6) — reuso, listagem, isolamento", () => {
     expect(listaA[0]!.nome).toBe("Cliente A");
     expect(listaB[0]!.nome).toBe("Cliente B"); // não vazou o reuso entre tenants
   });
-});
 
-describe("estação física na OS (I7)", () => {
-  let database: Database;
-  let sessao: SessaoTenant;
-
-  beforeAll(async () => {
-    await resetAndMigrate();
-    database = createTestDatabase();
-  });
-
-  afterAll(async () => {
-    await database.close();
-  });
-
-  beforeEach(async () => {
-    await database.db.delete(os);
-    await database.db.delete(estacao);
-    await database.db.delete(cliente);
-    await database.db.delete(usuario);
-    await database.db.delete(tenant);
-    const [t] = await database.db.insert(tenant).values({ nome: "T", templateRamo: "retifica_leve" }).returning();
-    const [u] = await database.db.insert(usuario).values({ tenantId: t!.id, nome: "Admin", email: "a@t.com", papel: "dono" }).returning();
-    sessao = { tenantId: t!.id, usuarioId: u!.id };
-  });
-
-  it("atribui e desatribui a estação física de uma OS", async () => {
-    const r = await abrirOS(database, sessao, input("C", "11900000000"));
+  it("estação física (I7): atribui e desatribui a estação de uma OS", async () => {
+    const r = await abrirOS(database, sessaoA, input("C", "11900000000"));
     const [est] = await database.db
       .insert(estacao)
-      .values({ tenantId: sessao.tenantId, nome: "Bloco", ordem: 1 })
+      .values({ tenantId: sessaoA.tenantId, nome: "Bloco", ordem: 1 })
       .returning();
 
-    await atribuirEstacaoAOs(database, sessao, r.osId, est!.id);
+    await atribuirEstacaoAOs(database, sessaoA, r.osId, est!.id);
     let [linha] = await database.db.select().from(os).where(eq(os.id, r.osId));
     expect(linha!.estacaoId).toBe(est!.id);
 
-    await atribuirEstacaoAOs(database, sessao, r.osId, null);
+    await atribuirEstacaoAOs(database, sessaoA, r.osId, null);
     [linha] = await database.db.select().from(os).where(eq(os.id, r.osId));
     expect(linha!.estacaoId).toBeNull();
   });
