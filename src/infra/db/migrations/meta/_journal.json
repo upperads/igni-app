@@ -120,6 +120,13 @@
       "when": 1782768805570,
       "tag": "0016_lucky_demogoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1782780595725,
+      "tag": "0017_violet_rocket_racer",
+      "breakpoints": true
     }
   ]
 }

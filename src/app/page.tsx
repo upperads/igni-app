@@ -4,7 +4,7 @@ import { CardPainelBump } from "@/app/_components/card-painel-bump";
 import { RealtimePainel } from "@/app/_components/realtime-painel";
 import { pode } from "@/domain/auth/rbac";
 import { sessaoAtual } from "@/infra/auth/sessao";
-import { estadoImplantacaoNoTenant } from "@/infra/composition/config";
+import { estadoImplantacaoNoTenant, temDemonstracaoNoTenant } from "@/infra/composition/config";
 import { historicoResponsabilidade, listarPainel } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
 import { BarraResponsabilizacao } from "@/ui/components/barra-responsabilizacao";
@@ -20,21 +20,20 @@ export default async function Home() {
 
   // Onboarding só interessa a quem implanta (dono/gestor); produção/recepção vão direto à operação.
   const podeConfigurar = pode(sessao.papel, "config:editar");
-  const [{ kpis, etapas }, historico, implantacao] = await Promise.all([
+  const [{ kpis, etapas }, historico, implantacao, temDemo] = await Promise.all([
     listarPainel(sessao),
     historicoResponsabilidade(sessao, 30),
-    podeConfigurar
-      ? estadoImplantacaoNoTenant(sessao)
-      : Promise.resolve(null),
+    podeConfigurar ? estadoImplantacaoNoTenant(sessao) : Promise.resolve(null),
+    podeConfigurar ? temDemonstracaoNoTenant(sessao) : Promise.resolve(false),
   ]);
   const alarme = kpis.paradaCritica > 0 || kpis.atraso.total > 0;
-  // Mostra o guia enquanto a oficina não começou a rodar (sem equipe E sem OS).
-  const mostrarGuia = implantacao !== null && implantacao.oficinaNova;
+  // Mostra o guia enquanto a oficina não começou a rodar, OU enquanto há demo (para oferecer limpar).
+  const mostrarGuia = implantacao !== null && (implantacao.oficinaNova || temDemo);
 
   return (
     <AppShell alarme={alarme}>
       {mostrarGuia ? (
-        <ComecePorAqui estado={implantacao} />
+        <ComecePorAqui estado={implantacao} temDemo={temDemo} />
       ) : (
         <Link
           href="/primeiros-passos"

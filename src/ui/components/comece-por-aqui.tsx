@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { EstadoImplantacao } from "@/infra/composition/config";
+import { BotaoDemonstracao } from "./botao-demonstracao";
 
 interface Passo {
   feito: boolean;
@@ -14,7 +15,13 @@ interface Passo {
  * "painel vazio" por uma jornada de três passos: convidar a equipe, conferir as estações, abrir a
  * primeira OS. Some sozinho quando a oficina começa a rodar (tem equipe e tem OS).
  */
-export function ComecePorAqui({ estado }: { estado: EstadoImplantacao }) {
+export function ComecePorAqui({
+  estado,
+  temDemo,
+}: {
+  estado: EstadoImplantacao;
+  temDemo: boolean;
+}) {
   const passos: Passo[] = [
     {
       feito: estado.temEquipe,
@@ -98,6 +105,13 @@ export function ComecePorAqui({ estado }: { estado: EstadoImplantacao }) {
           </li>
         ))}
       </ol>
+
+      <div className="mt-4 border-t border-grafite-700 pt-4">
+        <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-aco-400">
+          Quer ver o app cheio primeiro?
+        </p>
+        <BotaoDemonstracao temDemo={temDemo} />
+      </div>
     </section>
   );
 }

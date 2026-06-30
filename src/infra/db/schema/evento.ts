@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { estadoOs, origemEvento } from "./enums";
 import { os } from "./os";
 import { tenant } from "./tenant";
@@ -21,5 +21,8 @@ export const evento = pgTable("evento", {
   porUsuarioId: uuid("por_usuario_id").references(() => usuario.id, { onDelete: "set null" }),
   motivo: text("motivo"),
   origem: origemEvento("origem").notNull().default("escritorio"),
+  // Seed de demonstração (I5): evento gerado junto com uma OS de demo (inclui histórico passado que
+  // enche o relatório). Marcado para o "Limpar demonstração" apagar junto. Espelha `os.is_demo`.
+  isDemo: boolean("is_demo").notNull().default(false),
   em: timestamp("em", { withTimezone: true }).notNull().defaultNow(),
 });

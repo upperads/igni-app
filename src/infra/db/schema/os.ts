@@ -48,6 +48,9 @@ export const os = pgTable(
   travamentoResponsabilidade: responsabilidade("travamento_responsabilidade"),
   // Gate do CQ (RN-01): aprovação do controle de qualidade. Resetada ao reentrar no CQ (retrabalho).
   cqAprovado: boolean("cq_aprovado").notNull().default(false),
+  // Seed de demonstração (I5): OS criada pelo "Preencher com exemplo". Marca o que o "Limpar
+  // demonstração" pode apagar — o banco real nunca fica sujo. Não filtra leitura (a demo MOSTRA tudo).
+  isDemo: boolean("is_demo").notNull().default(false),
     prazoPrometido: date("prazo_prometido"),
     entrouNoEstadoEm: timestamp("entrou_no_estado_em", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
