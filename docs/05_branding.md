@@ -146,6 +146,24 @@ A identidade visual já tem fundamento forte ([globals.css](../src/app/globals.c
 
 ---
 
-## 8. Conexão com as próximas fases
-- **PRD/SDD (Fase 3)**: o território "visibilidade honesta" e a régua É/NÃO-É priorizam o backlog — o portal do cliente (onde a marca clara nasce) e os refinos de A11y sobem.
-- **Naming (fim da cadeia)**: quando reabrir, o critério já está dado — o nome tem que caber em "visibilidade honesta do chão" e soar no chão de oficina, não numa pitch deck.
+## 8. Naming + slogan (FECHADO — 01/07/2026)
+
+O naming foi reaberto no fim da cadeia (como planejado) e **decidido**.
+
+**Nome/raiz: `Igni`** — mantido. Fundamento: (1) sonoro, curto, energético (do latim *ignis*, ignição/fogo) e fácil de falar no chão; (2) **único no setor** — o campo competitivo é um mar de "Oficina X / Motor Y / Ultracar / MinhaOficina" (todos falham no rename test, intercambiáveis); "Igni" destaca de longe; (3) zero migração (já está no código, deploy e na retífica-piloto). A crítica válida — "sozinho não diz o que entrega" — é resolvida pelo **slogan**, não por trocar o nome.
+
+**Formato (a decidir vendo a landing):** três candidatos vivos, a escolher quando o hero estiver montado com cada um:
+- **Igni puro** + slogan (recomendado do estrategista: mais limpo, cresce melhor, um nome só).
+- **Igni Prumo** — composto com a régua da verdade ("no prumo" = em ordem); autoexplicativo.
+- **Igni Pulso** — composto com o batimento ao vivo; energético, diz "tempo real".
+
+**Slogan de trabalho (a refinar com a landing):**
+> **Sua oficina inteira num relance. E a verdade de cada atraso.**
+
+Vende para o **dono** (quem compra), nos dois ângulos que ele escolheu: *visão do todo num relance* + *honestidade do atraso como prova*. **Regra de conversão vinda da pesquisa** ([voz_do_mercado](voz_do_mercado_igni.md) §H2): o slogan NUNCA vende "mostre a culpa ao cliente" — o consumidor lê atribuição de culpa como a oficina se blindando. A responsabilização é **prova interna que faz o dono confiar no dado**, não arma contra o cliente. Variantes para A/B guardadas: "O sistema que o chão realmente usa — e que te mostra tudo." · "Você vê onde cada serviço está. Sem adivinhar, sem ligar, sem maquiar."
+
+**Nomes descartados (e por quê):** a linha "nome novo puro" (Prumo, Pulso, Vigia, Talha, Compasso, Cume…) foi explorada e todos verificados **livres no setor de software de oficina** — mas o dono optou por **manter Igni** (preferência + a força de já estar no ar). Ficam arquivados como fonte para submarca/módulos.
+
+## 9. Conexão com as próximas fases
+- **Landing / funil (próxima frente)**: montar o hero com Igni puro vs. Igni Prumo vs. Igni Pulso para **decidir o formato vendo**; refinar a tagline; estruturar landing → signup → app com base no que os concorrentes fazem.
+- **PRD/SDD**: o território "visibilidade honesta" e a régua É/NÃO-É seguem priorizando o backlog.
