@@ -16,3 +16,4 @@ export * from "./ajuste-prioridade";
 export * from "./orcamento";
 export * from "./orcamento-item";
 export * from "./tenant-contador-os";
+export * from "./quiosque-setor";

@@ -127,6 +127,20 @@
       "when": 1782780595725,
       "tag": "0017_violet_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783022849612,
+      "tag": "0018_demonic_wendell_vaughn",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1783022849613,
+      "tag": "0019_rls_quiosque_setor",
+      "breakpoints": true
     }
   ]
 }
