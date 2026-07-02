@@ -57,6 +57,11 @@ export async function resolverQuiosquePublico(token: string) {
   return resolverQuiosque(database, token);
 }
 
+/** Valida o código curto de entrada (tela `/quiosque/entrar`) sem vazar o token cru. */
+export async function validarCodigoQuiosque(codigo: string): Promise<boolean> {
+  return (await resolverQuiosque(database, codigo)) !== null;
+}
+
 /** Lista as OS ATIVAS do setor do quiosque (escopo mínimo: só o setor). Null se quiosque inválido. */
 export async function dadosQuiosque(token: string): Promise<DadosQuiosque | null> {
   const q = await resolverQuiosque(database, token);

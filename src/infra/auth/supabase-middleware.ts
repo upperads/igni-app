@@ -5,8 +5,9 @@ const ROTAS_PUBLICAS = ["/login", "/criar-conta"];
 
 // Rotas que sempre passam (sem redirecionar por auth nem por 2FA):
 // - recuperação de senha (sessão AAL1 que precisa chegar à tela de nova senha);
-// - portal do cliente (público, sem sessão — o TOKEN é a credencial, ADR-012).
-const ROTAS_LIVRES = ["/recuperar", "/atualizar-senha", "/auth", "/portal"];
+// - portal do cliente (público, sem sessão — o TOKEN é a credencial, ADR-012);
+// - quiosque de setor (público, sem sessão — o TOKEN/código é a credencial, mesmo padrão do portal).
+const ROTAS_LIVRES = ["/recuperar", "/atualizar-senha", "/auth", "/portal", "/quiosque"];
 
 function ehPublica(path: string): boolean {
   return ROTAS_PUBLICAS.some((r) => path === r || path.startsWith(`${r}/`));
