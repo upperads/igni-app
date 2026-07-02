@@ -177,7 +177,6 @@ export interface QuiosqueResolvido {
 export async function resolverQuiosque(
   database: Database,
   tokenOuCodigo: string,
-  _agora: Date,
 ): Promise<QuiosqueResolvido | null> {
   if (!tokenOuCodigo || tokenOuCodigo.length < 4) {
     return null;
@@ -233,7 +232,7 @@ export async function bumpPorQuiosque(
   pinBruto: string,
   agora: Date,
 ): Promise<ResultadoQuiosque> {
-  const q = await resolverQuiosque(database, token, agora);
+  const q = await resolverQuiosque(database, token);
   if (!q) {
     return { ok: false, motivo: "Quiosque desligado. Peça um novo ao escritório." };
   }

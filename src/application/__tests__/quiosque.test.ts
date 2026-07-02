@@ -165,21 +165,21 @@ describe("quiosque — público (resolver token + bump com PIN)", () => {
   });
 
   it("resolverQuiosque devolve tenant+estacao do registro (não do input); revogado → null", async () => {
-    const r = await resolverQuiosque(database, tokenA, new Date());
+    const r = await resolverQuiosque(database, tokenA);
     expect(r).not.toBeNull();
     expect(r!.tenantId).toBe(sessaoA.tenantId);
     expect(r!.estacaoId).toBe(estacaoA);
   });
 
   it("resolverQuiosque aceita o código curto (entrada de backup) e resolve o mesmo registro", async () => {
-    const r = await resolverQuiosque(database, codigoCurtoA, new Date());
+    const r = await resolverQuiosque(database, codigoCurtoA);
     expect(r).not.toBeNull();
     expect(r!.tenantId).toBe(sessaoA.tenantId);
     expect(r!.estacaoId).toBe(estacaoA);
   });
 
   it("resolverQuiosque devolve null para token/código inexistente", async () => {
-    const r = await resolverQuiosque(database, "coisa-que-nao-existe-aqui", new Date());
+    const r = await resolverQuiosque(database, "coisa-que-nao-existe-aqui");
     expect(r).toBeNull();
   });
 
@@ -238,7 +238,7 @@ describe("quiosque — público (resolver token + bump com PIN)", () => {
     const [q] = await database.db.select().from(quiosqueSetor).limit(1);
     await database.db.update(quiosqueSetor).set({ revogadoEm: new Date() }).where(eq(quiosqueSetor.id, q!.id));
 
-    const resolvido = await resolverQuiosque(database, tokenA, new Date());
+    const resolvido = await resolverQuiosque(database, tokenA);
     expect(resolvido).toBeNull();
 
     const r = await bumpPorQuiosque(database, tokenA, osId, "controle_qualidade", "1234", new Date());
