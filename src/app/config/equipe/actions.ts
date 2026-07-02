@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { type Acao, pode } from "@/domain/auth/rbac";
 import { PAPEIS, type Papel } from "@/domain/auth/papel";
+import { pinValido } from "@/domain/os/pin";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
@@ -11,6 +12,7 @@ import {
   mudarPapelNoTenant,
   reativarMembroNoTenant,
 } from "@/infra/composition/equipe";
+import { definirPinNoTenant, limparPinNoTenant } from "@/infra/composition/quiosque";
 
 /** Autorização no boundary: gerir equipe é coisa de administração (dono/gestor). */
 async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
@@ -117,5 +119,40 @@ export async function acaoReativarMembro(membroId: string): Promise<ResultadoAca
     return { ok: true };
   } catch {
     return { ok: false, motivo: "Não foi possível reativar. Tente novamente." };
+  }
+}
+
+/** Define (ou troca) o PIN de 4 dígitos de um membro de produção — carimbo de autoria no quiosque. */
+export async function acaoDefinirPin(membroId: string, pin: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("usuario:gerenciar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  if (!pinValido(pin)) {
+    return { ok: false, motivo: "O PIN precisa ter exatamente 4 dígitos." };
+  }
+  try {
+    await definirPinNoTenant(auth.sessao, membroId, pin);
+    revalidatePath("/config/equipe");
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível definir o PIN. Tente novamente." };
+  }
+}
+
+export async function acaoLimparPin(membroId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("usuario:gerenciar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await limparPinNoTenant(auth.sessao, membroId);
+    revalidatePath("/config/equipe");
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Não foi possível limpar o PIN. Tente novamente." };
   }
 }

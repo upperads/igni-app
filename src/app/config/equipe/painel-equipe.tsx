@@ -3,10 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PAPEIS, type Papel } from "@/domain/auth/papel";
+import { pinValido } from "@/domain/os/pin";
 import type { MembroView } from "@/infra/composition/equipe";
 import {
   acaoConvidarMembro,
+  acaoDefinirPin,
   acaoDesativarMembro,
+  acaoLimparPin,
   acaoMudarPapel,
   acaoReativarMembro,
 } from "./actions";
@@ -87,6 +90,8 @@ export function PainelEquipe({ equipe, meuId }: Props) {
             onMudarPapel={(papel) => rodar(() => acaoMudarPapel(m.id, papel))}
             onDesativar={() => rodar(() => acaoDesativarMembro(m.id))}
             onReativar={() => rodar(() => acaoReativarMembro(m.id))}
+            onDefinirPin={(pin) => rodar(() => acaoDefinirPin(m.id, pin))}
+            onLimparPin={() => rodar(() => acaoLimparPin(m.id))}
           />
         ))}
       </ul>
@@ -227,6 +232,8 @@ function LinhaMembro({
   onMudarPapel,
   onDesativar,
   onReativar,
+  onDefinirPin,
+  onLimparPin,
 }: {
   membro: MembroView;
   souEu: boolean;
@@ -234,6 +241,8 @@ function LinhaMembro({
   onMudarPapel: (papel: Papel) => void;
   onDesativar: () => void;
   onReativar: () => void;
+  onDefinirPin: (pin: string) => void;
+  onLimparPin: () => void;
 }) {
   const [confirmando, setConfirmando] = useState(false);
 
@@ -241,10 +250,11 @@ function LinhaMembro({
     <li
       className={
         membro.ativo
-          ? "flex flex-wrap items-center gap-3 rounded-lg border border-grafite-700 bg-grafite-850 px-3 py-2.5"
-          : "flex flex-wrap items-center gap-3 rounded-lg border border-grafite-700 bg-grafite-900/60 px-3 py-2.5 opacity-70"
+          ? "flex flex-col gap-2 rounded-lg border border-grafite-700 bg-grafite-850 px-3 py-2.5"
+          : "flex flex-col gap-2 rounded-lg border border-grafite-700 bg-grafite-900/60 px-3 py-2.5 opacity-70"
       }
     >
+      <div className="flex flex-wrap items-center gap-3">
       <div className="min-w-0 flex-1">
         <p className="truncate font-body text-sm text-aco-100">
           {membro.nome}
@@ -256,66 +266,132 @@ function LinhaMembro({
         <p className="truncate font-mono text-xs text-aco-500">{membro.email}</p>
       </div>
 
-      {/* Dono não muda pelo select (é a âncora administrativa); a si mesmo, ninguém mexe. */}
-      {membro.papel === "dono" || souEu ? (
-        <span className="rounded-md bg-grafite-700 px-3 py-1.5 font-mono text-xs text-aco-300">
-          {ROTULO_PAPEL[membro.papel]}
-        </span>
-      ) : (
-        <select
-          value={membro.papel}
-          onChange={(e) => onMudarPapel(e.target.value as Papel)}
-          disabled={pendente || !membro.ativo}
-          aria-label={`Papel de ${membro.nome}`}
-          className="rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 font-mono text-xs text-aco-200 focus:border-ambar-500 focus:outline-none disabled:opacity-50"
-        >
-          {PAPEIS.filter((p) => p !== "dono").map((p) => (
-            <option key={p} value={p}>
-              {ROTULO_PAPEL[p]}
-            </option>
-          ))}
-        </select>
-      )}
-
-      {souEu ? null : membro.ativo ? (
-        confirmando ? (
-          <span className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={onDesativar}
-              disabled={pendente}
-              className="rounded-md bg-sinal-vermelho px-2 py-1.5 font-mono text-xs text-grafite-900 disabled:opacity-50"
-            >
-              Tirar acesso
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmando(false)}
-              className="rounded-md px-2 py-1.5 font-mono text-xs text-aco-400 hover:text-aco-100"
-            >
-              Não
-            </button>
+        {/* Dono não muda pelo select (é a âncora administrativa); a si mesmo, ninguém mexe. */}
+        {membro.papel === "dono" || souEu ? (
+          <span className="rounded-md bg-grafite-700 px-3 py-1.5 font-mono text-xs text-aco-300">
+            {ROTULO_PAPEL[membro.papel]}
           </span>
+        ) : (
+          <select
+            value={membro.papel}
+            onChange={(e) => onMudarPapel(e.target.value as Papel)}
+            disabled={pendente || !membro.ativo}
+            aria-label={`Papel de ${membro.nome}`}
+            className="rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 font-mono text-xs text-aco-200 focus:border-ambar-500 focus:outline-none disabled:opacity-50"
+          >
+            {PAPEIS.filter((p) => p !== "dono").map((p) => (
+              <option key={p} value={p}>
+                {ROTULO_PAPEL[p]}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {souEu ? null : membro.ativo ? (
+          confirmando ? (
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={onDesativar}
+                disabled={pendente}
+                className="rounded-md bg-sinal-vermelho px-2 py-1.5 font-mono text-xs text-grafite-900 disabled:opacity-50"
+              >
+                Tirar acesso
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmando(false)}
+                className="rounded-md px-2 py-1.5 font-mono text-xs text-aco-400 hover:text-aco-100"
+              >
+                Não
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmando(true)}
+              disabled={pendente}
+              className="rounded-md border border-grafite-600 px-2 py-1.5 font-mono text-xs text-aco-400 hover:border-sinal-vermelho hover:text-sinal-vermelho disabled:opacity-50"
+            >
+              Desativar
+            </button>
+          )
         ) : (
           <button
             type="button"
-            onClick={() => setConfirmando(true)}
+            onClick={onReativar}
             disabled={pendente}
-            className="rounded-md border border-grafite-600 px-2 py-1.5 font-mono text-xs text-aco-400 hover:border-sinal-vermelho hover:text-sinal-vermelho disabled:opacity-50"
+            className="rounded-md border border-grafite-600 px-2 py-1.5 font-mono text-xs text-aco-300 hover:text-aco-100 disabled:opacity-50"
           >
-            Desativar
+            Reativar
           </button>
-        )
-      ) : (
-        <button
-          type="button"
-          onClick={onReativar}
-          disabled={pendente}
-          className="rounded-md border border-grafite-600 px-2 py-1.5 font-mono text-xs text-aco-300 hover:text-aco-100 disabled:opacity-50"
-        >
-          Reativar
-        </button>
-      )}
+        )}
+      </div>
+
+      {membro.papel === "producao" && membro.ativo ? (
+        <PinMembro
+          nome={membro.nome}
+          pendente={pendente}
+          onDefinirPin={onDefinirPin}
+          onLimparPin={onLimparPin}
+        />
+      ) : null}
     </li>
+  );
+}
+
+function PinMembro({
+  nome,
+  pendente,
+  onDefinirPin,
+  onLimparPin,
+}: {
+  nome: string;
+  pendente: boolean;
+  onDefinirPin: (pin: string) => void;
+  onLimparPin: () => void;
+}) {
+  const [pin, setPin] = useState("");
+
+  function salvar() {
+    if (!pinValido(pin)) {
+      return;
+    }
+    onDefinirPin(pin);
+    setPin("");
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 border-t border-grafite-700 pt-2">
+      <label htmlFor={`pin-${nome}`} className="font-mono text-xs text-aco-400">
+        PIN (4 dígitos)
+      </label>
+      <input
+        id={`pin-${nome}`}
+        value={pin}
+        onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        inputMode="numeric"
+        maxLength={4}
+        aria-label={`PIN de ${nome}`}
+        placeholder="0000"
+        className="w-20 rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 text-center font-mono text-sm tracking-widest text-aco-100 placeholder:text-aco-600 focus:border-ambar-500 focus:outline-none"
+      />
+      <button
+        type="button"
+        onClick={salvar}
+        disabled={pendente || !pinValido(pin)}
+        className="rounded-md border border-grafite-600 px-2 py-1.5 font-mono text-xs text-aco-300 hover:border-ambar-500 hover:text-ambar-500 disabled:opacity-50"
+      >
+        Salvar PIN
+      </button>
+      <button
+        type="button"
+        onClick={onLimparPin}
+        disabled={pendente}
+        className="rounded-md px-2 py-1.5 font-mono text-xs text-aco-500 hover:text-sinal-vermelho disabled:opacity-50"
+      >
+        Limpar PIN
+      </button>
+    </div>
   );
 }
