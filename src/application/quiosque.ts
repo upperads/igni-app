@@ -241,12 +241,28 @@ export async function bumpPorQuiosque(
   if (!pin) {
     return { ok: false, motivo: "PIN inválido (4 dígitos)." };
   }
+  // Trava de design: o quiosque do chão NUNCA destranca a execução — entrar em `execucao` depende do
+  // gate de orçamento (RN-01), que é responsabilidade do escritório, não do tablet. Como o contexto
+  // de gate aqui é fixado (orcamentoAprovado:true), recusar este destino fecha o buraco de pular o
+  // gate por uma chamada futura. O chão avança o fluxo físico (→CQ, →pronta, →entregue), não libera obra.
+  if (para === "execucao") {
+    return { ok: false, motivo: "A liberação da execução é feita pelo escritório, não pelo chão." };
+  }
+
   return database.withTenant(q.tenantId, async (tx) => {
     // 1) PIN → usuário produção do tenant (carimbo). Não achou = PIN não confere (não destranca).
     const [autor] = await tx
       .select({ id: usuario.id })
       .from(usuario)
-      .where(and(eq(usuario.pinHash, hashPin(pin)), eq(usuario.papel, "producao")))
+      .where(
+        and(
+          eq(usuario.pinHash, hashPin(pin)),
+          eq(usuario.papel, "producao"),
+          // Redundante sob a RLS ativa, mas defesa em profundidade: blinda contra um refactor futuro
+          // que troque `withTenant` por conexão crua. O PIN só carimba um produtivo do PRÓPRIO tenant.
+          eq(usuario.tenantId, q.tenantId),
+        ),
+      )
       .limit(1);
     if (!autor) {
       return { ok: false, motivo: "PIN não confere. Tente de novo." };

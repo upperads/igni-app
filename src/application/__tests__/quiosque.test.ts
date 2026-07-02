@@ -224,6 +224,16 @@ describe("quiosque — público (resolver token + bump com PIN)", () => {
     expect(ordem!.estado).toBe("execucao"); // não mudou
   });
 
+  it("o quiosque NÃO destranca a execução (trava de gate; só o escritório libera obra)", async () => {
+    // OS em aguardando_peca poderia estruturalmente ir a execucao — mas o chão não pode fazer isso.
+    await database.db.update(os).set({ estado: "aguardando_peca" }).where(eq(os.id, osId));
+    const r = await bumpPorQuiosque(database, tokenA, osId, "execucao", "1234", new Date());
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toMatch(/escrit[óo]rio/i);
+    const [ordem] = await database.db.select().from(os).where(eq(os.id, osId));
+    expect(ordem!.estado).toBe("aguardando_peca"); // não mudou
+  });
+
   it("token revogado não resolve (bump falha)", async () => {
     const [q] = await database.db.select().from(quiosqueSetor).limit(1);
     await database.db.update(quiosqueSetor).set({ revogadoEm: new Date() }).where(eq(quiosqueSetor.id, q!.id));
