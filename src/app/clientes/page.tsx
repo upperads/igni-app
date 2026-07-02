@@ -6,6 +6,7 @@ import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarClientesNoTenant } from "@/infra/composition/clientes";
 import { AppShell } from "@/ui/components/app-shell";
 import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
+import { telefone } from "@/ui/format";
 
 export const metadata: Metadata = {
   title: "Clientes — Igni",
@@ -79,7 +80,7 @@ export default async function ClientesPage({
                   <p className="truncate font-body text-sm text-aco-100">{c.nome}</p>
                   <p className="truncate font-mono text-xs text-aco-500">
                     {ROTULO_TIPO_CLIENTE[c.tipo as TipoCliente]}
-                    {c.whatsapp ? ` · ${c.whatsapp}` : ""}
+                    {c.whatsapp ? ` · ${telefone(c.whatsapp)}` : ""}
                   </p>
                 </div>
                 <span className="shrink-0 font-mono text-xs text-aco-400">

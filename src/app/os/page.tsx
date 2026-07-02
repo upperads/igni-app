@@ -7,12 +7,11 @@ import { AppShell } from "@/ui/components/app-shell";
 import { Button } from "@/ui/components/button";
 import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
 import { EstadoBadge } from "@/ui/components/estado-badge";
+import { data } from "@/ui/format";
 
 export const metadata: Metadata = {
   title: "Ordens de serviço — Igni",
 };
-
-const DATA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
 export default async function OsPage() {
   const sessao = await sessaoAtual();
@@ -65,7 +64,7 @@ export default async function OsPage() {
                 </div>
                 <EstadoBadge estado={item.estado} />
                 <span className="hidden w-20 shrink-0 text-right font-mono text-xs tabular-nums text-aco-400 sm:inline">
-                  {DATA.format(item.criadoEm)}
+                  {data(item.criadoEm)}
                 </span>
               </Link>
             </li>

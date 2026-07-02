@@ -8,6 +8,7 @@ import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarEstacoesNoTenant } from "@/infra/composition/config";
 import { type DetalheOs, detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { AppShell } from "@/ui/components/app-shell";
+import { dataHora } from "@/ui/format";
 import { MedidorEstado } from "@/ui/components/medidor-estado";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
 import { type Bola, Responsabilizacao } from "@/ui/components/responsabilizacao";
@@ -16,8 +17,6 @@ import { AvisarWhatsapp } from "./avisar-whatsapp";
 import { EstacaoFisica } from "./estacao-fisica";
 import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
-
-const DATA_HORA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
 const TIPO_CLIENTE_ROTULO: Record<string, string> = {
   frota: "Frota",
@@ -187,7 +186,7 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
                   ? `${rotuloEstado(ev.deEstado)} → ${rotuloEstado(ev.paraEstado)}`
                   : `Aberta (${rotuloEstado(ev.paraEstado)})`}
               </p>
-              <p className="mt-0.5 font-mono text-xs text-aco-400">{DATA_HORA.format(ev.em)}</p>
+              <p className="mt-0.5 font-mono text-xs text-aco-400">{dataHora(ev.em)}</p>
               {ev.motivo ? <p className="mt-0.5 font-body text-xs text-aco-400">{ev.motivo}</p> : null}
             </li>
           ))}

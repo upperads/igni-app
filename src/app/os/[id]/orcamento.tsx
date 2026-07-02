@@ -19,6 +19,7 @@ import {
 } from "../actions";
 import { Button } from "@/ui/components/button";
 import { INPUT_CLASS, LABEL_CLASS } from "@/ui/components/text-field";
+import { moeda } from "@/ui/format";
 import { DecisaoOrcamento } from "./modal-aprovacao";
 
 const STATUS_ROTULO: Record<StatusOrcamento, string> = {
@@ -27,9 +28,6 @@ const STATUS_ROTULO: Record<StatusOrcamento, string> = {
   aprovado: "Aprovado",
   recusado: "Recusado",
 };
-
-const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const fmt = (centavos: number) => moeda.format(centavos / 100);
 
 function centavosPreview(valor: string, markup: string): number {
   const v = Number.parseFloat(valor.replace(",", "."));
@@ -103,7 +101,7 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
           </span>
           {orcamento ? (
             <span className="font-mono text-sm tabular-nums text-aco-100">
-              {fmt(orcamento.totais.total)}
+              {moeda(orcamento.totais.total)}
             </span>
           ) : null}
         </div>
@@ -117,7 +115,7 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
                   {i.descricao}
                   {i.markupPct > 0 ? ` (+${i.markupPct}%)` : ""}
                 </span>
-                <span className="font-mono tabular-nums text-aco-100">{fmt(i.totalCentavos)}</span>
+                <span className="font-mono tabular-nums text-aco-100">{moeda(i.totalCentavos)}</span>
               </li>
             ))}
           </ul>
@@ -212,7 +210,7 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
 
       <div className="mt-4 flex items-center justify-between border-t border-grafite-700 pt-3">
         <span className={LABEL_CLASS}>Total (prévia)</span>
-        <span className="font-mono text-lg tabular-nums text-aco-100">{fmt(totalPreview)}</span>
+        <span className="font-mono text-lg tabular-nums text-aco-100">{moeda(totalPreview)}</span>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">

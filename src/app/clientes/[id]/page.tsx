@@ -6,12 +6,11 @@ import { rotuloEstado } from "@/domain/os/estado";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { detalheClienteNoTenant } from "@/infra/composition/clientes";
 import { AppShell } from "@/ui/components/app-shell";
+import { data, telefone } from "@/ui/format";
 
 export const metadata: Metadata = {
   title: "Cliente — Igni",
 };
-
-const DATA = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
 export default async function ClienteDetalhePage({
   params,
@@ -45,9 +44,9 @@ export default async function ClienteDetalhePage({
           {cliente.nome}
         </h1>
         <p className="mt-1 font-body text-sm text-aco-400">
-          {cliente.whatsapp ? `WhatsApp ${cliente.whatsapp} · ` : ""}
+          {cliente.whatsapp ? `WhatsApp ${telefone(cliente.whatsapp)} · ` : ""}
           {cliente.totalOs} {cliente.totalOs === 1 ? "ordem de serviço" : "ordens de serviço"}
-          {" · "}cliente desde {DATA.format(cliente.criadoEm)}
+          {" · "}cliente desde {data(cliente.criadoEm)}
         </p>
       </header>
 
@@ -68,7 +67,7 @@ export default async function ClienteDetalhePage({
                   <p className="truncate font-body text-sm text-aco-100">
                     <span className="font-mono text-aco-400">OS-{o.numero}</span> · {o.equipamento}
                   </p>
-                  <p className="font-mono text-xs text-aco-500">{DATA.format(o.criadoEm)}</p>
+                  <p className="font-mono text-xs text-aco-500">{data(o.criadoEm)}</p>
                 </div>
                 <span className="shrink-0 font-mono text-xs text-aco-300">
                   {rotuloEstado(o.estado)}

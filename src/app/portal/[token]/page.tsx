@@ -4,10 +4,8 @@ import { statusCliente } from "@/domain/os/status-cliente";
 import { ROTULO_TIPO_ITEM } from "@/domain/orcamento/orcamento";
 import { dadosPortal, type PortalView } from "@/infra/composition/portal";
 import { dentroDoLimite } from "@/infra/rate-limit";
+import { moeda } from "@/ui/format";
 import { DecisaoPortal } from "./decisao";
-
-const moeda = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const fmt = (c: number) => moeda.format(c / 100);
 
 const MARCOS = ["Recebido", "Orçamento", "Execução", "Pronto", "Entregue"] as const;
 const MARCO_DE: Record<EstadoOS, number> = {
@@ -132,7 +130,7 @@ function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
           <div className="mb-3 flex items-baseline justify-between">
             <span className="font-display text-lg text-tinta-900">Orçamento</span>
             <span className="font-mono text-lg tabular-nums text-tinta-900">
-              {fmt(dados.orcamento.total)}
+              {moeda(dados.orcamento.total)}
             </span>
           </div>
           <ul className="flex flex-col gap-1.5">
@@ -144,7 +142,7 @@ function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
                   </span>{" "}
                   {i.descricao}
                 </span>
-                <span className="font-mono tabular-nums text-tinta-900">{fmt(i.totalCentavos)}</span>
+                <span className="font-mono tabular-nums text-tinta-900">{moeda(i.totalCentavos)}</span>
               </li>
             ))}
           </ul>
