@@ -52,6 +52,12 @@ describe("isolamento multi-tenant — quiosque_setor (RLS)", () => {
     const vistos = await database.withTenant(tenantA, (tx) => tx.select().from(quiosqueSetor));
     expect(vistos).toHaveLength(1);
     expect(vistos[0]!.tenantId).toBe(tenantA);
+
+    // E buscar diretamente o quiosque de B (por token) não retorna nada sob o tenant de A.
+    const deB = await database.withTenant(tenantA, (tx) =>
+      tx.select().from(quiosqueSetor).where(eq(quiosqueSetor.tokenHash, "hashB")),
+    );
+    expect(deB).toHaveLength(0);
   });
 
   it("a RLS barra ESCREVER um quiosque marcado como de outro tenant (WITH CHECK)", async () => {
