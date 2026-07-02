@@ -1,16 +1,28 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { SessaoTenant } from "@/application/abrir-os";
+import { abrirOS, type SessaoTenant } from "@/application/abrir-os";
 import {
+  bumpPorQuiosque,
   definirPin,
   gerarQuiosque,
   hashPin,
   hashToken,
   listarQuiosques,
+  resolverQuiosque,
   revogarQuiosque,
 } from "@/application/quiosque";
 import type { Database } from "@/infra/db/connection";
-import { estacao, quiosqueSetor, tenant, usuario } from "@/infra/db/schema";
+import {
+  cliente,
+  entrada,
+  equipamento,
+  estacao,
+  evento,
+  os,
+  quiosqueSetor,
+  tenant,
+  usuario,
+} from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
 describe("quiosque — aplicação (admin: gerar/revogar/PIN)", () => {
@@ -82,5 +94,144 @@ describe("quiosque — aplicação (admin: gerar/revogar/PIN)", () => {
     await revogarQuiosque(database, sessaoB, q!.id); // no-op sob a RLS de B
     const [aindaAtivo] = await database.db.select().from(quiosqueSetor).where(eq(quiosqueSetor.id, q!.id));
     expect(aindaAtivo!.revogadoEm).toBeNull();
+  });
+});
+
+describe("quiosque — público (resolver token + bump com PIN)", () => {
+  let database: Database;
+  let sessaoA: SessaoTenant;
+  let estacaoA: string;
+  let prodA: string;
+  let tokenA: string;
+  let codigoCurtoA: string;
+  let osId: string;
+
+  beforeAll(async () => {
+    await resetAndMigrate();
+    database = createTestDatabase();
+  });
+  afterAll(async () => {
+    await database.close();
+  });
+  beforeEach(async () => {
+    // Ordem das FKs: evento/os referenciam entrada/equipamento/estacao; entrada/equipamento
+    // referenciam cliente; quiosque_setor referencia estacao/usuario; usuario/estacao referenciam tenant.
+    await database.db.delete(evento);
+    await database.db.delete(os);
+    await database.db.delete(entrada);
+    await database.db.delete(equipamento);
+    await database.db.delete(cliente);
+    await database.db.delete(quiosqueSetor);
+    await database.db.delete(estacao);
+    await database.db.delete(usuario);
+    await database.db.delete(tenant);
+
+    const [a] = await database.db
+      .insert(tenant)
+      .values({ nome: "A", templateRamo: "retifica_leve" })
+      .returning();
+    const [ua] = await database.db
+      .insert(usuario)
+      .values({ tenantId: a!.id, nome: "Admin A", email: "admin@a.com", papel: "dono" })
+      .returning();
+    const [prod] = await database.db
+      .insert(usuario)
+      .values({ tenantId: a!.id, nome: "Zé", email: "ze@a.com", papel: "producao" })
+      .returning();
+    const [ea] = await database.db
+      .insert(estacao)
+      .values({ tenantId: a!.id, nome: "Bloco", ordem: 1 })
+      .returning();
+    sessaoA = { tenantId: a!.id, usuarioId: ua!.id };
+    estacaoA = ea!.id;
+    prodA = prod!.id;
+
+    await definirPin(database, sessaoA, prodA, "1234");
+    const gerado = await gerarQuiosque(database, sessaoA, estacaoA);
+    tokenA = gerado.token;
+    codigoCurtoA = gerado.codigoCurto;
+
+    const aberta = await abrirOS(database, sessaoA, {
+      cliente: { nome: "Cliente", tipo: "avulso" },
+      equipamento: { tipo: "Motor" },
+      entrada: { modalidade: "so_usinagem" },
+    });
+    osId = aberta.osId;
+    // Coloca a OS na estação do quiosque, em execução (transição válida para controle_qualidade).
+    await database.db
+      .update(os)
+      .set({ estacaoId: estacaoA, estado: "execucao" })
+      .where(eq(os.id, osId));
+  });
+
+  it("resolverQuiosque devolve tenant+estacao do registro (não do input); revogado → null", async () => {
+    const r = await resolverQuiosque(database, tokenA, new Date());
+    expect(r).not.toBeNull();
+    expect(r!.tenantId).toBe(sessaoA.tenantId);
+    expect(r!.estacaoId).toBe(estacaoA);
+  });
+
+  it("resolverQuiosque aceita o código curto (entrada de backup) e resolve o mesmo registro", async () => {
+    const r = await resolverQuiosque(database, codigoCurtoA, new Date());
+    expect(r).not.toBeNull();
+    expect(r!.tenantId).toBe(sessaoA.tenantId);
+    expect(r!.estacaoId).toBe(estacaoA);
+  });
+
+  it("resolverQuiosque devolve null para token/código inexistente", async () => {
+    const r = await resolverQuiosque(database, "coisa-que-nao-existe-aqui", new Date());
+    expect(r).toBeNull();
+  });
+
+  it("bump com PIN CERTO avança a OS e carimba o usuário do PIN, origem=chao", async () => {
+    const r = await bumpPorQuiosque(database, tokenA, osId, "controle_qualidade", "1234", new Date());
+    expect(r.ok).toBe(true);
+
+    const [ordem] = await database.db.select().from(os).where(eq(os.id, osId));
+    expect(ordem!.estado).toBe("controle_qualidade");
+
+    const [ev] = await database.db
+      .select()
+      .from(evento)
+      .where(eq(evento.osId, osId))
+      .orderBy(desc(evento.em))
+      .limit(1);
+    expect(ev!.porUsuarioId).toBe(prodA);
+    expect(ev!.origem).toBe("chao");
+    expect(ev!.paraEstado).toBe("controle_qualidade");
+  });
+
+  it("bump com PIN ERRADO não avança nada", async () => {
+    const r = await bumpPorQuiosque(database, tokenA, osId, "controle_qualidade", "9999", new Date());
+    expect(r.ok).toBe(false);
+    expect(r.motivo).toMatch(/pin/i);
+
+    const [ordem] = await database.db.select().from(os).where(eq(os.id, osId));
+    expect(ordem!.estado).toBe("execucao"); // não mudou
+  });
+
+  it("bump para OS de OUTRO setor é recusado (escopo mínimo do quiosque)", async () => {
+    const [outraEstacao] = await database.db
+      .insert(estacao)
+      .values({ tenantId: sessaoA.tenantId, nome: "Usinagem", ordem: 2 })
+      .returning();
+    await database.db.update(os).set({ estacaoId: outraEstacao!.id }).where(eq(os.id, osId));
+
+    const r = await bumpPorQuiosque(database, tokenA, osId, "controle_qualidade", "1234", new Date());
+    expect(r.ok).toBe(false);
+
+    const [ordem] = await database.db.select().from(os).where(eq(os.id, osId));
+    expect(ordem!.estado).toBe("execucao"); // não mudou
+  });
+
+  it("token revogado não resolve (bump falha)", async () => {
+    const [q] = await database.db.select().from(quiosqueSetor).limit(1);
+    await database.db.update(quiosqueSetor).set({ revogadoEm: new Date() }).where(eq(quiosqueSetor.id, q!.id));
+
+    const resolvido = await resolverQuiosque(database, tokenA, new Date());
+    expect(resolvido).toBeNull();
+
+    const r = await bumpPorQuiosque(database, tokenA, osId, "controle_qualidade", "1234", new Date());
+    expect(r.ok).toBe(false);
   });
 });

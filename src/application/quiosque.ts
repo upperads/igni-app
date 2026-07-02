@@ -1,10 +1,11 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
+import { type EstadoOS, validarTransicao } from "@/domain/os/estado";
 import { normalizarPin } from "@/domain/os/pin";
 import { ALFABETO_CODIGO, gerarCodigoCurto } from "@/domain/os/quiosque";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { estacao, quiosqueSetor, usuario } from "@/infra/db/schema";
+import { estacao, evento, os, quiosqueSetor, usuario } from "@/infra/db/schema";
 import type { SessaoTenant } from "./abrir-os";
 
 /**
@@ -158,5 +159,135 @@ export function limparPin(
 ): Promise<void> {
   return database.withTenant(sessao.tenantId, async (tx) => {
     await tx.update(usuario).set({ pinHash: null }).where(eq(usuario.id, usuarioId));
+  });
+}
+
+export interface QuiosqueResolvido {
+  tenantId: string;
+  estacaoId: string;
+  quiosqueId: string;
+}
+
+/**
+ * Etapa 1 (PRIVILEGIADA, mínima): resolve o quiosque por TOKEN (`token_hash`) OU por código curto.
+ * O tenant/estação vêm do REGISTRO, nunca do input. Null se não existe ou está revogado. O token
+ * usa `hashToken` (sha256, alta entropia); o código curto é comparado em claro (é público por
+ * natureza — atalho de backup, não credencial — e protegido por rate-limit na rota, Task 7).
+ */
+export async function resolverQuiosque(
+  database: Database,
+  tokenOuCodigo: string,
+  _agora: Date,
+): Promise<QuiosqueResolvido | null> {
+  if (!tokenOuCodigo || tokenOuCodigo.length < 4) {
+    return null;
+  }
+  const [porToken] = await database.db
+    .select({
+      id: quiosqueSetor.id,
+      tenantId: quiosqueSetor.tenantId,
+      estacaoId: quiosqueSetor.estacaoId,
+      revogadoEm: quiosqueSetor.revogadoEm,
+    })
+    .from(quiosqueSetor)
+    .where(eq(quiosqueSetor.tokenHash, hashToken(tokenOuCodigo)))
+    .limit(1);
+  // tenta como token; se não achou, tenta como código curto (entrada de backup)
+  const linha =
+    porToken ??
+    (
+      await database.db
+        .select({
+          id: quiosqueSetor.id,
+          tenantId: quiosqueSetor.tenantId,
+          estacaoId: quiosqueSetor.estacaoId,
+          revogadoEm: quiosqueSetor.revogadoEm,
+        })
+        .from(quiosqueSetor)
+        .where(eq(quiosqueSetor.codigoCurto, tokenOuCodigo))
+        .limit(1)
+    )[0];
+  if (!linha || linha.revogadoEm !== null) {
+    return null;
+  }
+  return { tenantId: linha.tenantId, estacaoId: linha.estacaoId, quiosqueId: linha.id };
+}
+
+export interface ResultadoQuiosque {
+  ok: boolean;
+  motivo?: string;
+}
+
+/**
+ * Bump pelo quiosque: resolve o quiosque (etapa 1) → dentro do tenant, confere que a OS é do SETOR
+ * do quiosque → valida a transição → resolve o PIN em um usuário `producao` do tenant (carimbo) →
+ * grava a transição com `porUsuarioId` = usuário do PIN e `origem='chao'`. PIN errado NÃO destranca.
+ * O gate de orçamento é dado como cumprido (o bump do chão não deve barrar por falta de orçamento —
+ * isso é responsabilidade do escritório, resolvida antes da OS chegar ao setor físico).
+ */
+export async function bumpPorQuiosque(
+  database: Database,
+  token: string,
+  osId: string,
+  para: EstadoOS,
+  pinBruto: string,
+  agora: Date,
+): Promise<ResultadoQuiosque> {
+  const q = await resolverQuiosque(database, token, agora);
+  if (!q) {
+    return { ok: false, motivo: "Quiosque desligado. Peça um novo ao escritório." };
+  }
+  const pin = normalizarPin(pinBruto);
+  if (!pin) {
+    return { ok: false, motivo: "PIN inválido (4 dígitos)." };
+  }
+  return database.withTenant(q.tenantId, async (tx) => {
+    // 1) PIN → usuário produção do tenant (carimbo). Não achou = PIN não confere (não destranca).
+    const [autor] = await tx
+      .select({ id: usuario.id })
+      .from(usuario)
+      .where(and(eq(usuario.pinHash, hashPin(pin)), eq(usuario.papel, "producao")))
+      .limit(1);
+    if (!autor) {
+      return { ok: false, motivo: "PIN não confere. Tente de novo." };
+    }
+    // 2) A OS tem que ser do SETOR do quiosque (escopo mínimo).
+    const [ordem] = await tx
+      .select({ estado: os.estado, estacaoId: os.estacaoId, cqAprovado: os.cqAprovado })
+      .from(os)
+      .where(eq(os.id, osId))
+      .limit(1);
+    if (!ordem || ordem.estacaoId !== q.estacaoId) {
+      return { ok: false, motivo: "Esta OS não é deste setor." };
+    }
+    // 3) Valida a transição (gates lidos do dado, como o /chao). cqAprovado já lido acima.
+    const contexto = { orcamentoAprovado: true, cqAprovado: ordem.cqAprovado };
+    const veredito = validarTransicao(ordem.estado, para, contexto);
+    if (!veredito.ok) {
+      return { ok: false, motivo: veredito.motivo };
+    }
+    // 4) Aplica + carimba (porUsuarioId = autor do PIN, origem=chao).
+    await tx
+      .update(os)
+      .set({
+        estado: para,
+        entrouNoEstadoEm: agora,
+        ...(para === "controle_qualidade" ? { cqAprovado: false } : {}),
+      })
+      .where(eq(os.id, osId));
+    await tx.insert(evento).values({
+      tenantId: q.tenantId,
+      osId,
+      deEstado: ordem.estado,
+      paraEstado: para,
+      porUsuarioId: autor.id,
+      origem: "chao",
+    });
+    // marca uso do quiosque
+    await tx
+      .update(quiosqueSetor)
+      .set({ ultimoUsoEm: agora })
+      .where(eq(quiosqueSetor.id, q.quiosqueId));
+    return { ok: true };
   });
 }
