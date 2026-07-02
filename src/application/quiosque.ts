@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { normalizarPin } from "@/domain/os/pin";
 import { ALFABETO_CODIGO, gerarCodigoCurto } from "@/domain/os/quiosque";
@@ -7,9 +7,24 @@ import type { Database } from "@/infra/db/connection";
 import { estacao, quiosqueSetor, usuario } from "@/infra/db/schema";
 import type { SessaoTenant } from "./abrir-os";
 
-/** sha256 hex — guardamos SÓ o hash de token/PIN, nunca o valor cru (padrão do portal). */
-function hash(valor: string): string {
-  return createHash("sha256").update(valor).digest("hex");
+/**
+ * Hash do TOKEN do quiosque: sha256 puro. Correto porque o token tem ALTA entropia (256 bits
+ * aleatórios) — força bruta é inviável, então salt/HMAC não adicionam segurança (padrão do portal).
+ */
+export function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
+ * Hash do PIN: HMAC-SHA256 com segredo do servidor. O PIN tem BAIXA entropia (4 dígitos = 10 mil),
+ * então sha256 puro seria pré-computável (rainbow table) num eventual dump do banco. O HMAC com um
+ * segredo que NÃO está no banco mata isso — sem o segredo, o `pin_hash` não é reversível. O PIN é
+ * carimbo de autoria (não destranca nada), mas isto é defesa em profundidade + LGPD (PIN liga à
+ * pessoa). A busca PIN→usuário segue por igualdade de hash (o segredo é o mesmo p/ gravar e resolver).
+ */
+export function hashPin(pin: string): string {
+  const segredo = process.env.PIN_HMAC_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? "igni-pin-dev";
+  return createHmac("sha256", segredo).update(pin).digest("hex");
 }
 
 /** Sufixo aleatório do código curto (4 chars do alfabeto sem ambíguos), via crypto. */
@@ -53,7 +68,7 @@ export async function gerarQuiosque(
         await tx.insert(quiosqueSetor).values({
           tenantId: sessao.tenantId,
           estacaoId,
-          tokenHash: hash(token),
+          tokenHash: hashToken(token),
           codigoCurto,
           criadoPor: sessao.usuarioId,
         });
@@ -131,7 +146,7 @@ export async function definirPin(
     if (alvo.papel !== "producao") {
       throw new DadosInvalidosError("O PIN é só para a equipe de produção (chão).");
     }
-    await tx.update(usuario).set({ pinHash: hash(pin) }).where(eq(usuario.id, usuarioId));
+    await tx.update(usuario).set({ pinHash: hashPin(pin) }).where(eq(usuario.id, usuarioId));
   });
 }
 

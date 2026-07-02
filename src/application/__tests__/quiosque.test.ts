@@ -1,18 +1,17 @@
-import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { SessaoTenant } from "@/application/abrir-os";
 import {
   definirPin,
   gerarQuiosque,
+  hashPin,
+  hashToken,
   listarQuiosques,
   revogarQuiosque,
 } from "@/application/quiosque";
 import type { Database } from "@/infra/db/connection";
 import { estacao, quiosqueSetor, tenant, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
-
-const sha = (v: string) => createHash("sha256").update(v).digest("hex");
 
 describe("quiosque — aplicação (admin: gerar/revogar/PIN)", () => {
   let database: Database;
@@ -50,7 +49,7 @@ describe("quiosque — aplicação (admin: gerar/revogar/PIN)", () => {
     expect(r.token.length).toBeGreaterThanOrEqual(32);
     expect(r.codigoCurto).toMatch(/^BLOCO-/);
     const [linha] = await database.db.select().from(quiosqueSetor).where(eq(quiosqueSetor.estacaoId, estacaoA));
-    expect(linha!.tokenHash).toBe(sha(r.token)); // guarda o HASH, nunca o cru
+    expect(linha!.tokenHash).toBe(hashToken(r.token)); // guarda o HASH, nunca o cru
     expect(linha!.tenantId).toBe(sessaoA.tenantId);
     expect(linha!.revogadoEm).toBeNull();
   });
@@ -68,7 +67,7 @@ describe("quiosque — aplicação (admin: gerar/revogar/PIN)", () => {
   it("definirPin guarda o hash do PIN só para produção", async () => {
     await definirPin(database, sessaoA, prodA, "1234");
     const [u] = await database.db.select().from(usuario).where(eq(usuario.id, prodA));
-    expect(u!.pinHash).toBe(sha("1234"));
+    expect(u!.pinHash).toBe(hashPin("1234"));
   });
 
   it("definirPin rejeita PIN inválido e usuário não-produção", async () => {
