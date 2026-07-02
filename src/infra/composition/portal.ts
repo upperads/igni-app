@@ -14,7 +14,7 @@ import {
 } from "@/domain/orcamento/orcamento";
 import { database } from "@/infra/db/client";
 import { cliente, entrada, equipamento, orcamento, orcamentoItem, os } from "@/infra/db/schema";
-import { mascararChassi } from "@/infra/lgpd";
+import { mascararChassi, mascararPlaca } from "@/infra/lgpd";
 import { notificarPainel } from "@/infra/realtime/notificar";
 
 /** De quem é a bola, na voz do cliente (CDC: estado/dependência, nunca isenção de culpa da oficina). */
@@ -29,7 +29,7 @@ export interface ItemPortal {
 export interface PortalView {
   numero: number;
   equipamento: string;
-  placa: string | null;
+  placaMascarada: string | null;
   chassiMascarado: string | null;
   clienteNome: string;
   estado: EstadoOS;
@@ -105,7 +105,7 @@ export async function dadosPortal(
     return {
       numero: linha.numero,
       equipamento: linha.equipTipo,
-      placa: linha.placa,
+      placaMascarada: mascararPlaca(linha.placa),
       chassiMascarado: mascararChassi(linha.chassi),
       clienteNome: linha.clienteNome,
       estado: linha.estado,

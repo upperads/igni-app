@@ -8,6 +8,8 @@ export interface SessaoUsuario {
   tenantId: string;
   usuarioId: string;
   papel: Papel;
+  /** Nome da oficina (para o cabeçalho). */
+  tenantNome: string;
 }
 
 /**
@@ -30,5 +32,10 @@ export const sessaoAtual = cache(async (): Promise<SessaoUsuario | null> => {
   if (!perfil) {
     return null;
   }
-  return { tenantId: perfil.tenantId, usuarioId: perfil.usuarioId, papel: perfil.papel };
+  return {
+    tenantId: perfil.tenantId,
+    usuarioId: perfil.usuarioId,
+    papel: perfil.papel,
+    tenantNome: perfil.tenantNome,
+  };
 });

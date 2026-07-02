@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { FormAtualizarSenha } from "./form";
 
@@ -16,6 +17,12 @@ export default function AtualizarSenhaPage() {
         </p>
 
         <FormAtualizarSenha />
+
+        <p className="mt-6 font-body text-sm text-aco-400">
+          <Link href="/login" className="text-ambar-500 hover:underline">
+            Voltar para o login
+          </Link>
+        </p>
       </div>
     </main>
   );

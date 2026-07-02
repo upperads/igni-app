@@ -14,6 +14,9 @@ const body = Archivo({ subsets: ["latin"], variable: "--font-archivo" });
 const mono = Spline_Sans_Mono({ subsets: ["latin"], variable: "--font-spline-mono" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://igni-app-production.up.railway.app",
+  ),
   title: "Igni — Painel da oficina",
   description: "O sistema operacional da sua oficina: triagem em tempo real e status para o cliente.",
 };

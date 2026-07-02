@@ -37,6 +37,7 @@ export default async function ClientesPage({
             <input
               name="q"
               defaultValue={termo}
+              aria-label="Buscar por nome ou WhatsApp"
               placeholder="Buscar por nome ou WhatsApp"
               className="w-56 rounded-md border border-grafite-600 bg-grafite-900 px-3 py-2 font-body text-sm text-aco-100 placeholder:text-aco-500 focus:border-ambar-500 focus:outline-none"
             />
@@ -84,7 +85,7 @@ export default async function ClientesPage({
                   </p>
                 </div>
                 <span className="shrink-0 font-mono text-xs text-aco-400">
-                  {c.totalOs} {c.totalOs === 1 ? "OS" : "OS"}
+                  {c.totalOs} {c.totalOs === 1 ? "OS" : "OSs"}
                 </span>
               </Link>
             </li>

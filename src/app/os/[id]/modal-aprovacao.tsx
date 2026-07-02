@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type CanalAprovacao,
   CANAIS_APROVACAO,
@@ -70,6 +70,20 @@ function ModalCanal({
   onEscolher: (canal: CanalAprovacao) => void;
   onFechar: () => void;
 }) {
+  const primeiroRef = useRef<HTMLButtonElement>(null);
+
+  // Fecha no Escape e move o foco para dentro ao abrir (a11y de teclado — sem prender o usuário fora).
+  useEffect(() => {
+    primeiroRef.current?.focus();
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onFechar();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onFechar]);
+
   return (
     <div
       role="dialog"
@@ -87,9 +101,10 @@ function ModalCanal({
           Isso vira um registro na linha do tempo da OS. Escolha o canal:
         </p>
         <div className="mt-4 flex flex-col gap-2">
-          {CANAIS_APROVACAO.map((canal) => (
+          {CANAIS_APROVACAO.map((canal, i) => (
             <button
               key={canal}
+              ref={i === 0 ? primeiroRef : undefined}
               type="button"
               disabled={pendente}
               onClick={() => onEscolher(canal)}

@@ -20,6 +20,7 @@
   --color-aco-200: oklch(0.84 0.007 80);
   --color-aco-300: oklch(0.73 0.008 80);
   --color-aco-400: oklch(0.63 0.009 78);
+  --color-aco-500: oklch(0.55 0.009 78);
 
   /* --- Âmbar: marca + estrutura (risco/foco/ativo). Nunca status. --- */
   --color-ambar-500: oklch(0.78 0.14 70);
@@ -58,6 +59,7 @@
     --color-aco-200: oklch(0.37 0.012 70);
     --color-aco-300: oklch(0.47 0.012 71);
     --color-aco-400: oklch(0.57 0.012 72);
+    --color-aco-500: oklch(0.63 0.012 73);
 
     --color-ambar-500: oklch(0.72 0.14 64);
     --color-ambar-600: oklch(0.62 0.13 58);
@@ -85,6 +87,18 @@
   :focus-visible {
     outline: 2px solid var(--color-ambar-500);
     outline-offset: 2px;
+  }
+
+  /* Respeita quem pede menos movimento (WCAG 2.3.3): neutraliza transições e o pulse do skeleton. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

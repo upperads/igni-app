@@ -54,6 +54,7 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
+  const [salvo, setSalvo] = useState(false);
   const [link, setLink] = useState<string | null>(null);
 
   const status: StatusOrcamento = orcamento?.status ?? "rascunho";
@@ -72,8 +73,12 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
 
   const totalPreview = linhas.reduce((s, l) => s + centavosPreview(l.valor, l.markup), 0);
 
-  function rodar(acao: () => Promise<{ ok: boolean; motivo?: string; token?: string }>) {
+  function rodar(
+    acao: () => Promise<{ ok: boolean; motivo?: string; token?: string }>,
+    confirmar = false,
+  ) {
     setErro(null);
+    setSalvo(false);
     iniciar(async () => {
       const r = await acao();
       if (!r.ok) {
@@ -82,6 +87,9 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
       }
       if (r.token) {
         setLink(`${window.location.origin}/portal/${r.token}`);
+      }
+      if (confirmar) {
+        setSalvo(true);
       }
       router.refresh();
     });
@@ -213,20 +221,27 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
         <span className="font-mono text-lg tabular-nums text-aco-100">{moeda(totalPreview)}</span>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <Button
           disabled={pendente}
           onClick={() =>
-            rodar(() =>
-              acaoMontarOrcamento(
-                osId,
-                linhas.filter((l) => l.descricao.trim() !== ""),
-              ),
+            rodar(
+              () =>
+                acaoMontarOrcamento(
+                  osId,
+                  linhas.filter((l) => l.descricao.trim() !== ""),
+                ),
+              true,
             )
           }
         >
           Salvar
         </Button>
+        {salvo ? (
+          <span role="status" className="font-mono text-sm text-sinal-verde">
+            Salvo ✓
+          </span>
+        ) : null}
         {orcamento && orcamento.itens.length > 0 ? (
           <Button
             variante="fantasma"

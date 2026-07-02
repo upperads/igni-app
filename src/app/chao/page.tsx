@@ -71,7 +71,7 @@ export default async function ChaoPage({
         <div className="flex items-center gap-4">
           <RealtimePainel tenantId={sessao.tenantId} />
           <Link href="/" className="font-mono text-xs text-aco-400 hover:text-aco-100">
-            sair
+            voltar ao painel
           </Link>
         </div>
       </header>

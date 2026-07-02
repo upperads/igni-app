@@ -43,7 +43,7 @@ export default async function PainelTvPage() {
           <RealtimePainel tenantId={sessao.tenantId} />
           <Relogio className="font-mono text-2xl tabular-nums text-aco-100" />
           <Link href="/" className="font-mono text-xs text-aco-400 hover:text-aco-100">
-            sair
+            voltar ao painel
           </Link>
         </div>
       </header>

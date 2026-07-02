@@ -132,6 +132,7 @@ function FormConvite({
         <input
           value={nome}
           onChange={(e) => setNome(e.target.value)}
+          aria-label="Nome do membro"
           placeholder="Nome"
           className="rounded-md border border-grafite-600 bg-grafite-900 px-3 py-2 font-body text-sm text-aco-100 placeholder:text-aco-500 focus:border-ambar-500 focus:outline-none"
         />
@@ -139,6 +140,7 @@ function FormConvite({
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           type="email"
+          aria-label="E-mail do membro (o login da pessoa)"
           placeholder="E-mail (o login da pessoa)"
           className="rounded-md border border-grafite-600 bg-grafite-900 px-3 py-2 font-body text-sm text-aco-100 placeholder:text-aco-500 focus:border-ambar-500 focus:outline-none"
         />

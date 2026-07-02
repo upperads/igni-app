@@ -80,7 +80,7 @@ function Conteudo({ dados, token }: { dados: PortalView; token: string }) {
         <h1 className="mt-1 font-display text-3xl leading-tight text-tinta-900">{dados.equipamento}</h1>
         <p className="mt-1 font-body text-sm text-tinta-500">
           {dados.clienteNome}
-          {dados.placa ? ` · ${dados.placa}` : ""}
+          {dados.placaMascarada ? ` · ${dados.placaMascarada}` : ""}
           {dados.chassiMascarado ? ` · ${dados.chassiMascarado}` : ""}
         </p>
       </header>

@@ -7,11 +7,22 @@ import { createSupabaseServer } from "@/infra/auth/supabase-server";
  * estabelece a sessão nos cookies e redireciona para `next`. Padrão @supabase/ssr (sem expor
  * token no fragmento da URL).
  */
+/**
+ * Só aceita destino INTERNO (começa com "/", mas não "//" nem "/\", que o navegador trata como
+ * URL de outro host). Barra o open redirect: um link com `next=https://evil.com` cairia em "/".
+ */
+function destinoSeguro(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
+    return "/";
+  }
+  return next;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const tokenHash = searchParams.get("token_hash");
   const tipo = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/";
+  const next = destinoSeguro(searchParams.get("next"));
 
   if (tokenHash && tipo) {
     const supabase = await createSupabaseServer();
