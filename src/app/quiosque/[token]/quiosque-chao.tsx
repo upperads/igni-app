@@ -2,18 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { EstadoOS } from "@/domain/os/estado";
 import { rotuloEstado } from "@/domain/os/estado";
+import type { CardQuiosque } from "@/infra/composition/quiosque";
 import { acaoBumpQuiosque } from "./actions";
-
-export interface CardQuiosqueView {
-  id: string;
-  numero: number;
-  equipamento: string;
-  estado: EstadoOS;
-  proximoBump: EstadoOS | null;
-  travado: boolean;
-}
 
 /**
  * Tela de chão do quiosque (tablet fixo no setor). Cards grandes, sem menu, sem AppShell — só o que
@@ -25,10 +16,10 @@ export function QuiosqueChao({
   token,
 }: {
   estacaoNome: string;
-  cards: CardQuiosqueView[];
+  cards: CardQuiosque[];
   token: string;
 }) {
-  const [alvo, setAlvo] = useState<CardQuiosqueView | null>(null);
+  const [alvo, setAlvo] = useState<CardQuiosque | null>(null);
 
   return (
     <div className="flex min-h-dvh flex-col bg-grafite-900">
@@ -94,7 +85,7 @@ function TecladoPin({
   token,
   onFechar,
 }: {
-  card: CardQuiosqueView;
+  card: CardQuiosque;
   token: string;
   onFechar: () => void;
 }) {

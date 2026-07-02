@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { dadosQuiosque } from "@/infra/composition/quiosque";
 import { dentroDoLimite } from "@/infra/rate-limit";
@@ -25,7 +26,15 @@ function Moldura({ children }: { children: React.ReactNode }) {
 export default async function QuiosquePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
 
-  if (!dentroDoLimite(`quiosque-view:${token}`, { limite: 120, janelaMs: 60_000 })) {
+  // Rate-limit por IP: o parâmetro pode ser um CÓDIGO CURTO (adivinhável). Se o limite fosse só por
+  // token, cada código chutado teria seu próprio balde e a enumeração passaria livre. O IP (que o
+  // atacante não escolhe) é a chave que barra a varredura de "BLOCO-XXXX". O por-token fica como
+  // proteção adicional contra um cliente legítimo recarregando demais.
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "anon";
+  const muitas =
+    !dentroDoLimite(`quiosque-view-ip:${ip}`, { limite: 40, janelaMs: 60_000 }) ||
+    !dentroDoLimite(`quiosque-view:${token}`, { limite: 120, janelaMs: 60_000 });
+  if (muitas) {
     return (
       <Moldura>
         <h1 className="font-display text-2xl text-aco-100">Muitas tentativas</h1>
