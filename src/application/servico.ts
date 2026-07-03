@@ -51,11 +51,13 @@ export function listarServicos(
 }
 
 /** Cria um serviço no catálogo do tenant. Valida nome/valor/markup. */
-export function criarServico(
+export async function criarServico(
   database: Database,
   sessao: SessaoTenant,
   input: ServicoInput,
 ): Promise<{ id: string }> {
+  // Valida ANTES do withTenant; `async` garante que o throw vire rejeição de Promise (contrato uniforme
+  // com editarServico/reajustarPrecos — um consumidor com `.catch()` sem await não é surpreendido).
   validarServico(input);
   return database.withTenant(sessao.tenantId, async (tx) => {
     const [novo] = await tx
@@ -73,7 +75,7 @@ export function criarServico(
 }
 
 /** Edita um serviço do tenant. Valida os campos. RLS garante que só o próprio tenant altera. */
-export function editarServico(
+export async function editarServico(
   database: Database,
   sessao: SessaoTenant,
   id: string,

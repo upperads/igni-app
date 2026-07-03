@@ -75,6 +75,17 @@ describe("servico — aplicação (CRUD + reajuste)", () => {
     await expect(reajustarPrecos(database, sessaoA, 999)).rejects.toThrow();
   });
 
+  it("criar/editar REJEITAM a Promise em input inválido (contrato async uniforme, não throw síncrono)", async () => {
+    // Se fossem síncronas, .rejects não capturaria o throw da validação. Prova o contrato uniforme.
+    await expect(
+      criarServico(database, sessaoA, { nome: "", tipo: "peca", valorCentavos: 100, markupPct: 0 }),
+    ).rejects.toThrow();
+    const { id } = await criarServico(database, sessaoA, { nome: "X", tipo: "peca", valorCentavos: 100, markupPct: 0 });
+    await expect(
+      editarServico(database, sessaoA, id, { nome: "X", tipo: "peca", valorCentavos: -1, markupPct: 0 }),
+    ).rejects.toThrow();
+  });
+
   it("isolamento: reajuste de A não toca serviços de B; A não edita serviço de B", async () => {
     await criarServico(database, sessaoA, { nome: "A1", tipo: "peca", valorCentavos: 10000, markupPct: 0 });
     const b = await criarServico(database, sessaoB, { nome: "B1", tipo: "peca", valorCentavos: 10000, markupPct: 0 });
