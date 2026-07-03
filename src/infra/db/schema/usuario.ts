@@ -25,6 +25,9 @@ export const usuario = pgTable(
     // Convite de equipe (I1): membro desativado perde o acesso (a sessão deixa de resolver perfil)
     // sem apagar a história. Nulo = ativo. Quem está fora da firma não entra mais.
     desativadoEm: timestamp("desativado_em", { withTimezone: true }),
+    // Quiosque de setor (P-0): hash do PIN de 4 dígitos que CARIMBA quem avançou no chão.
+    // Só produção usa; nulo para os demais. Nunca o PIN cru — sha256, como o token do portal.
+    pinHash: text("pin_hash"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("usuario_email_unico").on(t.email)],

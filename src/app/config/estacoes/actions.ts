@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import QRCode from "qrcode";
 import { type Acao, pode } from "@/domain/auth/rbac";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
@@ -10,6 +11,10 @@ import {
   renomearEstacaoNoTenant,
   reordenarEstacoesNoTenant,
 } from "@/infra/composition/config";
+import {
+  gerarQuiosqueNoTenant,
+  revogarQuiosqueNoTenant,
+} from "@/infra/composition/quiosque";
 
 /** Autorização no boundary: estações são configuração — só gestão (dono/gestor) ajusta. */
 async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
@@ -93,5 +98,45 @@ export async function acaoRemoverEstacao(estacaoId: string): Promise<ResultadoAc
       return { ok: false, motivo: erro.message };
     }
     return { ok: false, motivo: "Não foi possível remover a estação. Tente novamente." };
+  }
+}
+
+export interface ResultadoQuiosque {
+  ok: boolean;
+  motivo?: string;
+  qrDataUrl?: string;
+  codigoCurto?: string;
+  url?: string;
+}
+
+/** Liga o quiosque de um setor: gera token forte + código curto, e devolve o QR pronto (dataURL). */
+export async function acaoGerarQuiosque(estacaoId: string): Promise<ResultadoQuiosque> {
+  const auth = await autorizar("config:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    const { token, codigoCurto } = await gerarQuiosqueNoTenant(auth.sessao, estacaoId);
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://igni-app-production.up.railway.app";
+    const url = `${base}/quiosque/${token}`;
+    const qrDataUrl = await QRCode.toDataURL(url, { width: 320, margin: 1 });
+    revalidatePath("/config/estacoes");
+    return { ok: true, qrDataUrl, codigoCurto, url };
+  } catch {
+    return { ok: false, motivo: "Não foi possível gerar o quiosque. Tente novamente." };
+  }
+}
+
+export async function acaoRevogarQuiosque(quiosqueId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("config:editar");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await revogarQuiosqueNoTenant(auth.sessao, quiosqueId);
+    revalidatePath("/config/estacoes");
+    return { ok: true };
+  } catch {
+    return { ok: false, motivo: "Não foi possível revogar. Tente novamente." };
   }
 }
