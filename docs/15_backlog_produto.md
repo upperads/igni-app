@@ -40,7 +40,17 @@ quando o escritório muda algo, a TV do chão atualiza em <2s, e vice-versa. O `
 setor/filtro cada TV específica mostra** (hoje cada TV é aberta manualmente na URL certa). Seria um
 "gerenciador de telas": o escritório define, a TV obedece. Feature nova (registro de telas + push de config).
 
-## P-0. ⭐ Modelo de hardware/dispositivo do chão + login do setor (o furo que o dono achou)
+## P-0. ✅ NO AR (03/07/2026) — Quiosque de Setor + PIN
+**Entregue:** o tablet do box fica logado NO SETOR por um **token forte** (sha256, gerado pelo admin nas
+Estações via QR + código curto de backup); a equipe avança a OS (`/quiosque/[token]`, cards grandes, 1
+toque) e digita um **PIN de 4 dígitos individual** (HMAC-SHA256) que CARIMBA quem avançou — sem senha o
+dia todo, sem perder o "quem". Escopo mínimo (só avança OS do próprio setor; sem preço/orçamento/
+financeiro/cliente). Isolamento multi-tenant por RLS, rate-limit anti-brute-force nas 3 superfícies.
+Admin define o PIN na Equipe e revoga o quiosque nas Estações. Spec: `docs/superpowers/specs/2026-07-02-*`.
+**Fica para uma fatia futura (fecha o "PODE" do spec):** travar/destravar pelo quiosque; e explicar o
+modelo de hardware (TV na parede + tablet no box + PC no escritório) no onboarding/primeiros-passos.
+
+## P-0 (histórico). ⭐ Modelo de hardware/dispositivo do chão + login do setor (o furo que o dono achou)
 **A dor (nas palavras do dono):** *"como a equipe vai dar o bump numa TV? Teria que ter um PC pra cada
 box/setor?!"* — e antes: *"por que a equipe teria senha se vão ter a TV pra acompanhar?"*
 
