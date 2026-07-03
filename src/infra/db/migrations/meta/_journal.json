@@ -141,6 +141,20 @@
       "when": 1783022849613,
       "tag": "0019_rls_quiosque_setor",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783045690316,
+      "tag": "0020_material_salo",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1783045690317,
+      "tag": "0021_rls_servico",
+      "breakpoints": true
     }
   ]
 }
