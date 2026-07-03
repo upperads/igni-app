@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { type Acao, pode } from "@/domain/auth/rbac";
-import { TIPOS_ITEM, type TipoItem } from "@/domain/orcamento/orcamento";
+import { reaisParaCentavos, TIPOS_ITEM, type TipoItem } from "@/domain/orcamento/orcamento";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
@@ -28,15 +28,6 @@ async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro
 export interface ResultadoAcao {
   ok: boolean;
   motivo?: string;
-}
-
-/** Converte reais ("150" / "150,50") em centavos inteiros. Sem separador de milhar. */
-function reaisParaCentavos(bruto: string): number | null {
-  const v = bruto.trim().replace(",", ".");
-  if (!/^\d+(\.\d{1,2})?$/.test(v)) {
-    return null;
-  }
-  return Math.round(Number.parseFloat(v) * 100);
 }
 
 function lerInput(

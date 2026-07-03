@@ -10,6 +10,7 @@ import type { EstadoOS } from "@/domain/os/estado";
 import {
   type CanalAprovacao,
   CANAIS_APROVACAO,
+  reaisParaCentavos,
   type TipoItem,
   TIPOS_ITEM,
 } from "@/domain/orcamento/orcamento";
@@ -277,15 +278,6 @@ export async function acaoAjustarPrioridade(
 }
 
 // --- Orçamento (M5 / US-12) — RBAC: dono/gestor/recepção editam; produção só lê ---
-
-/** Converte reais ("150" / "150,50" / "150.50") em centavos inteiros. Sem separador de milhar. */
-function reaisParaCentavos(bruto: string): number | null {
-  const v = bruto.trim().replace(",", ".");
-  if (!/^\d+(\.\d{1,2})?$/.test(v)) {
-    return null;
-  }
-  return Math.round(Number.parseFloat(v) * 100);
-}
 
 export interface ItemFormulario {
   tipo: string;

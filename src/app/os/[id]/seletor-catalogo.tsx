@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ROTULO_TIPO_ITEM, TIPOS_ITEM } from "@/domain/orcamento/orcamento";
 import type { ServicoView } from "@/infra/composition/servico";
+import { moeda } from "@/ui/format";
 
 /** Converte centavos → string de reais no formato do input do builder ("1234" centavos → "12,34"). */
 function centavosParaReais(centavos: number): string {
@@ -82,7 +83,7 @@ export function SeletorCatalogo({
                             ) : null}
                           </span>
                           <span className="font-mono tabular-nums text-aco-300">
-                            {(s.valorCentavos / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                            {moeda(s.valorCentavos)}
                           </span>
                         </button>
                       </li>

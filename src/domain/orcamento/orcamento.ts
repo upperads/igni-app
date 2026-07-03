@@ -69,6 +69,18 @@ export function totalItem(item: { valorCentavos: number; markupPct: number }): n
   return item.valorCentavos + Math.round((item.valorCentavos * item.markupPct) / 100);
 }
 
+/**
+ * Converte reais digitados ("150" / "150,50" / "150.50") em CENTAVOS inteiros. Sem separador de
+ * milhar. `null` se o formato for inválido. Fonte única do parsing de dinheiro do orçamento/catálogo.
+ */
+export function reaisParaCentavos(bruto: string): number | null {
+  const v = bruto.trim().replace(",", ".");
+  if (!/^\d+(\.\d{1,2})?$/.test(v)) {
+    return null;
+  }
+  return Math.round(Number.parseFloat(v) * 100);
+}
+
 export interface TotaisOrcamento {
   porTipo: Record<TipoItem, number>;
   total: number;
