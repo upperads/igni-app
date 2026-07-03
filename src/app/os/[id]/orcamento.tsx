@@ -9,6 +9,7 @@ import {
   TIPOS_ITEM,
 } from "@/domain/orcamento/orcamento";
 import type { OrcamentoView } from "@/infra/composition/os";
+import type { ServicoView } from "@/infra/composition/servico";
 import {
   acaoAprovarOrcamento,
   acaoEnviarOrcamento,
@@ -21,6 +22,7 @@ import { Button } from "@/ui/components/button";
 import { INPUT_CLASS, LABEL_CLASS } from "@/ui/components/text-field";
 import { moeda } from "@/ui/format";
 import { DecisaoOrcamento } from "./modal-aprovacao";
+import { SeletorCatalogo } from "./seletor-catalogo";
 
 const STATUS_ROTULO: Record<StatusOrcamento, string> = {
   rascunho: "Rascunho",
@@ -48,14 +50,16 @@ interface Props {
   cqAprovado: boolean;
   orcamento: OrcamentoView | null;
   podeEditar: boolean;
+  servicos: ServicoView[];
 }
 
-export function Orcamento({ osId, orcamento, podeEditar }: Props) {
+export function Orcamento({ osId, orcamento, podeEditar, servicos }: Props) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const [salvo, setSalvo] = useState(false);
   const [link, setLink] = useState<string | null>(null);
+  const [catalogoAberto, setCatalogoAberto] = useState(false);
 
   const status: StatusOrcamento = orcamento?.status ?? "rascunho";
   const editavel = podeEditar && status === "rascunho";
@@ -208,13 +212,33 @@ export function Orcamento({ osId, orcamento, podeEditar }: Props) {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={() => setLinhas((ls) => [...ls, { ...LINHA_VAZIA }])}
-        className="mt-3 font-mono text-sm text-ambar-500 hover:underline"
-      >
-        + Adicionar item
-      </button>
+      <div className="mt-3 flex flex-wrap items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setLinhas((ls) => [...ls, { ...LINHA_VAZIA }])}
+          className="font-mono text-sm text-ambar-500 hover:underline"
+        >
+          + Adicionar item
+        </button>
+        <button
+          type="button"
+          onClick={() => setCatalogoAberto(true)}
+          className="font-mono text-sm text-ambar-500 hover:underline"
+        >
+          + Do catálogo
+        </button>
+      </div>
+
+      {catalogoAberto ? (
+        <SeletorCatalogo
+          servicos={servicos}
+          onEscolher={(item) => {
+            setLinhas((ls) => [...ls, item]);
+            setCatalogoAberto(false);
+          }}
+          onFechar={() => setCatalogoAberto(false)}
+        />
+      ) : null}
 
       <div className="mt-4 flex items-center justify-between border-t border-grafite-700 pt-3">
         <span className={LABEL_CLASS}>Total (prévia)</span>

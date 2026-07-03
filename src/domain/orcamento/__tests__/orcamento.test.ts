@@ -7,6 +7,7 @@ import {
   podeEditarItens,
   podeEnviar,
   podeReabrir,
+  reaisParaCentavos,
   STATUS_ORCAMENTO,
   TIPOS_ITEM,
   totalItem,
@@ -48,6 +49,16 @@ describe("orçamento — totais (centavos, markup inteiro)", () => {
     expect(totalItem({ valorCentavos: 10_000, markupPct: 30 })).toBe(13_000);
     // arredonda ao centavo
     expect(totalItem({ valorCentavos: 333, markupPct: 10 })).toBe(333 + 33);
+  });
+
+  it("reaisParaCentavos: aceita vírgula/ponto, rejeita formato inválido", () => {
+    expect(reaisParaCentavos("150")).toBe(15_000);
+    expect(reaisParaCentavos("150,50")).toBe(15_050);
+    expect(reaisParaCentavos("150.50")).toBe(15_050);
+    expect(reaisParaCentavos("  12,3 ")).toBe(1_230);
+    expect(reaisParaCentavos("")).toBeNull();
+    expect(reaisParaCentavos("abc")).toBeNull();
+    expect(reaisParaCentavos("1,234")).toBeNull(); // 3 casas decimais
   });
 
   it("subtotais por tipo + total geral", () => {

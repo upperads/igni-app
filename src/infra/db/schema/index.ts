@@ -17,3 +17,4 @@ export * from "./orcamento";
 export * from "./orcamento-item";
 export * from "./tenant-contador-os";
 export * from "./quiosque-setor";
+export * from "./servico";

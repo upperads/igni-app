@@ -7,6 +7,7 @@ import { diasRestantesAte } from "@/domain/os/triagem";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarEstacoesNoTenant } from "@/infra/composition/config";
 import { type DetalheOs, detalheOs, orcamentoDaOs } from "@/infra/composition/os";
+import { listarServicosNoTenant } from "@/infra/composition/servico";
 import { AppShell } from "@/ui/components/app-shell";
 import { dataHora } from "@/ui/format";
 import { MedidorEstado } from "@/ui/components/medidor-estado";
@@ -60,9 +61,10 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
-  const [orcamento, estacoes] = await Promise.all([
+  const [orcamento, estacoes, servicos] = await Promise.all([
     orcamentoDaOs(sessao, id),
     listarEstacoesNoTenant(sessao),
+    listarServicosNoTenant(sessao),
   ]);
   const podeEditarOrcamento = pode(sessao.papel, "orcamento:editar");
   const podeEditarOs = pode(sessao.papel, "os:editar");
@@ -149,6 +151,7 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
             cqAprovado={os.cqAprovado}
             orcamento={orcamento}
             podeEditar={podeEditarOrcamento}
+            servicos={servicos}
           />
         </section>
 
