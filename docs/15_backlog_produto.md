@@ -2,8 +2,8 @@
 
 > Frentes de EVOLUÇÃO DO PRODUTO levantadas pelo dono em 01–02/07/2026, durante a varredura de
 > qualidade. São maiores que polimento — cada uma merece planejamento próprio (`/produto` / `/prioriza`),
-> não ser espremida numa fatia de correção. Registradas aqui pra não se perderem. **Nada implementado
-> ainda; a varredura de qualidade seguiu separada.**
+> não ser espremida numa fatia de correção. Registradas aqui pra não se perderem. **Entregues até aqui:
+> P-0 (Quiosque + PIN) e P-2 (Catálogo de preços). Próximo: P-1 (papéis/setores).**
 
 ## P-1. Nomenclatura e estrutura de setores/papéis
 **A dor (nas palavras do dono):** *"por que a equipe teria senha se eles vão ter a TV pra acompanhar?"* +
@@ -18,17 +18,20 @@
 um faz/vê. Isso destrava features que hoje não existem (financeiro, compras). Decisão de arquitetura de
 papéis — precisa de `/produto` antes de código. Conecta com o RBAC existente (`rbac.ts`).
 
-## P-2. Catálogo de serviços com preço (parar de digitar tudo manual)
+## P-2. ✅ NO AR (03/07/2026) — Catálogo de serviços com preço
 **A dor:** *"o Igni não tem precificação, adição de serviços já pré-definidos etc., tem que colocar sempre
 manualmente na OS."*
 
-**Estado atual:** todo item de orçamento é digitado à mão (`orcamento.tsx`, `montarOrcamento`). Não há
-catálogo.
-
-**A oportunidade:** um **catálogo de serviços por tenant** (ex.: "retífica de cabeçote = R$X", "plaina = R$Y",
-"teste de trinca = R$Z") que a recepção **seleciona** em vez de digitar. Ganho enorme de velocidade e
-**padronização de preço**. Schema novo (tabela `servico` por tenant) + UI de gestão do catálogo + seleção
-no builder de orçamento. Feature de produto de verdade.
+**Entregue:** um **catálogo de serviços por tenant** (tabela `servico`: nome, tipo `peca/mao_de_obra/terceiro`,
+`valor_centavos`, `markup_pct` padrão, `ativo`), gerido em **`/servicos`** (CRUD agrupado por tipo, RBAC
+`orcamento:editar` = dono/gestor/recepção) com **reajuste em massa** dos ativos (+/−X%, faixa −90 a +200,
+com confirmação). No builder de orçamento, o botão **"Do catálogo"** abre um seletor e **preenche uma linha
+editável** — o preço do catálogo é **sugestão**: copia pra linha e pode divergir naquela OS (sem FK,
+`montarOrcamento` intocado). Isolamento multi-tenant por RLS (migrations 0020/0021), testado A↔B. Dinheiro
+sempre em centavos inteiros; `reaisParaCentavos` é fonte única no domínio. Spec/plano:
+`docs/superpowers/specs/2026-07-03-catalogo-servicos-preco-design.md` + `docs/superpowers/plans/2026-07-03-*`.
+**Fica para fatias futuras:** histórico de preço, importar planilha, preço por cliente, contagem "N serviços
+afetados" antes de confirmar o reajuste, validação da faixa do pct no cliente (hoje só no servidor).
 
 ## P-3. Controle remoto do que cada TV mostra (chão ↔ escritório)
 **A dor:** *"o chão tem vários setores, cada um com a TV exibindo a operação; o admin gerencia pelo
@@ -90,10 +93,11 @@ Grande; provavelmente depois de P-1 (papéis) e P-2 (preços), que são pré-req
 ---
 
 ## Ordem sugerida (a validar com /prioriza)
-1. **P-1 (papéis/setores)** — é base: define quem vê/faz o quê, e destrava P-4.
-2. **P-2 (catálogo de preços)** — alto valor imediato, dor concreta do dia a dia, escopo médio.
-3. **P-3 (controle remoto de TV)** — melhora a operação de chão; o realtime já dá a fundação.
-4. **P-4 (financeiro)** — maior, depende de P-1/P-2.
+- ✅ **P-0 (quiosque + PIN)** — NO AR (03/07).
+- ✅ **P-2 (catálogo de preços)** — NO AR (03/07).
+1. **P-1 (papéis/setores)** — é base: define quem vê/faz o quê, e destrava P-4. **← próximo**
+2. **P-3 (controle remoto de TV)** — melhora a operação de chão; o realtime já dá a fundação.
+3. **P-4 (financeiro)** — maior, depende de P-1/P-2.
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
