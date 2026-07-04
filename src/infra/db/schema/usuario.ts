@@ -1,4 +1,5 @@
 import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { cargo } from "./cargo";
 import { papelUsuario } from "./enums";
 import { tenant } from "./tenant";
 
@@ -28,6 +29,9 @@ export const usuario = pgTable(
     // Quiosque de setor (P-0): hash do PIN de 4 dígitos que CARIMBA quem avançou no chão.
     // Só produção usa; nulo para os demais. Nunca o PIN cru — sha256, como o token do portal.
     pinHash: text("pin_hash"),
+    // Cargo (P-1): a função da pessoa, fonte de verdade do RBAC. Nulo só transitório na migração;
+    // ao fim todo usuário tem cargo. FK por tenant (o seed liga cada usuário ao cargo do seu papel).
+    cargoId: uuid("cargo_id").references(() => cargo.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("usuario_email_unico").on(t.email)],
