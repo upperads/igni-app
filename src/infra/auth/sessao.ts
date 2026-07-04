@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { exigeMfa, type Permissao } from "@/domain/auth/cargo";
 import type { Papel } from "@/domain/auth/papel";
 import { resolverPerfilPorAuthUserId } from "@/infra/auth/perfil-repo";
 import { createSupabaseServer } from "@/infra/auth/supabase-server";
@@ -8,18 +9,14 @@ export interface SessaoUsuario {
   tenantId: string;
   usuarioId: string;
   papel: Papel;
-  /** Nome da oficina (para o cabeçalho). */
   tenantNome: string;
+  cargoNome: string;
+  permissoes: Permissao[];
+  exige2fa: boolean;
+  /** cargo:gerir é implícito e exclusivo do Dono. */
+  podeGerirCargos: boolean;
 }
 
-/**
- * Sessão corrente do servidor: usuário autenticado (Supabase) + perfil da app (tenant, papel).
- * Retorna null se não há sessão ou perfil. Leitura de bootstrap (conexão privilegiada).
- *
- * MEMOIZADO POR REQUEST (`React.cache`): numa mesma renderização, a página E a `AppShell` (e qualquer
- * outro componente) chamam isto sem refazer `getUser()` (round-trip ao Supabase) + a query de perfil.
- * Antes, cada navegação pagava essa latência 2× — esta dedupe é a correção da navegação lenta.
- */
 export const sessaoAtual = cache(async (): Promise<SessaoUsuario | null> => {
   const supabase = await createSupabaseServer();
   const {
@@ -37,5 +34,9 @@ export const sessaoAtual = cache(async (): Promise<SessaoUsuario | null> => {
     usuarioId: perfil.usuarioId,
     papel: perfil.papel,
     tenantNome: perfil.tenantNome,
+    cargoNome: perfil.cargoNome,
+    permissoes: perfil.permissoes,
+    exige2fa: exigeMfa({ chao: false, exige2fa: perfil.exige2fa, permissoes: perfil.permissoes }),
+    podeGerirCargos: perfil.cargoNome === "Dono",
   };
 });

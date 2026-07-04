@@ -1,22 +1,23 @@
 import { and, eq, isNull } from "drizzle-orm";
+import type { Permissao } from "@/domain/auth/cargo";
 import type { Papel } from "@/domain/auth/papel";
 import type { AppDatabase } from "@/infra/db/connection";
-import { tenant, usuario } from "@/infra/db/schema";
+import { cargo, tenant, usuario } from "@/infra/db/schema";
 
 export interface PerfilUsuario {
   usuarioId: string;
   tenantId: string;
   papel: Papel;
-  /** Nome da oficina (tenant) — para o cabeçalho do app, no lugar do rótulo hardcoded. */
   tenantNome: string;
+  cargoNome: string;
+  permissoes: Permissao[];
+  exige2fa: boolean;
 }
 
 /**
- * Resolve o perfil da app (tenant + papel + nome da oficina) a partir da identidade autenticada.
- * Leitura de bootstrap da sessão: roda na conexão privilegiada porque ainda não há `tenant` corrente.
- *
- * Membro DESATIVADO (saiu da firma) não resolve perfil → a sessão não se estabelece → sem acesso.
- * É aqui que a desativação da equipe (I1) vira enforcement real, não só um rótulo na tela.
+ * Resolve o perfil da app a partir da identidade autenticada. Agora traz o CARGO (nome, permissões,
+ * flag 2FA) — fonte de verdade do RBAC (P-1). `papel` permanece (legado). Membro desativado não
+ * resolve (I1). leftJoin no cargo: usuário sem cargo (transitório) resolve com permissões vazias.
  */
 export async function resolverPerfilPorAuthUserId(
   db: AppDatabase,
@@ -28,11 +29,26 @@ export async function resolverPerfilPorAuthUserId(
       tenantId: usuario.tenantId,
       papel: usuario.papel,
       tenantNome: tenant.nome,
+      cargoNome: cargo.nome,
+      permissoes: cargo.permissoes,
+      exige2faFlag: cargo.exige2fa,
     })
     .from(usuario)
     .innerJoin(tenant, eq(tenant.id, usuario.tenantId))
+    .leftJoin(cargo, eq(cargo.id, usuario.cargoId))
     .where(and(eq(usuario.authUserId, authUserId), isNull(usuario.desativadoEm)))
     .limit(1);
 
-  return row ?? null;
+  if (!row) {
+    return null;
+  }
+  return {
+    usuarioId: row.usuarioId,
+    tenantId: row.tenantId,
+    papel: row.papel,
+    tenantNome: row.tenantNome,
+    cargoNome: row.cargoNome ?? "",
+    permissoes: (row.permissoes ?? []) as Permissao[],
+    exige2fa: row.exige2faFlag ?? false,
+  };
 }
