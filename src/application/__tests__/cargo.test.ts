@@ -73,4 +73,17 @@ describe("aplicação — cargo (isolado por tenant)", () => {
     const lista = await listarCargos(database, sessaoA());
     expect(lista.find((c) => c.id === recep!.id)!.nome).toBe("Atendimento");
   });
+
+  it("criarCargo DERIVA exige2fa do gatilho (Piso 3: piso, nunca teto)", async () => {
+    // client mandou exige2fa=false, mas equipe:gerir é gatilho → grava true
+    const { id } = await criarCargo(database, sessaoA(), { nome: "Supervisor", chao: false, exige2fa: false, permissoes: ["equipe:gerir"] });
+    const lista = await listarCargos(database, sessaoA());
+    expect(lista.find((c) => c.id === id)!.exige2fa).toBe(true);
+  });
+
+  it("criarCargo NÃO força 2FA sem gatilho (dinheiro:ver não dispara)", async () => {
+    const { id } = await criarCargo(database, sessaoA(), { nome: "Balcão", chao: false, exige2fa: false, permissoes: ["dinheiro:ver", "os:abrir"] });
+    const lista = await listarCargos(database, sessaoA());
+    expect(lista.find((c) => c.id === id)!.exige2fa).toBe(false);
+  });
 });

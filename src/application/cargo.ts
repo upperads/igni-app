@@ -1,5 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { ehCargoDono, type Permissao, validarCargo } from "@/domain/auth/cargo";
+import { ehCargoDono, exigeMfa, type Permissao, validarCargo } from "@/domain/auth/cargo";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
 import { cargo, usuario } from "@/infra/db/schema";
@@ -53,7 +53,7 @@ export async function criarCargo(
         nome: input.nome.trim(),
         sistema: false,
         chao: input.chao,
-        exige2fa: input.exige2fa,
+        exige2fa: exigeMfa({ chao: input.chao, exige2fa: input.exige2fa, permissoes: input.permissoes }),
         permissoes: input.permissoes,
       })
       .returning({ id: cargo.id });
@@ -78,7 +78,12 @@ export async function editarCargo(
     }
     await tx
       .update(cargo)
-      .set({ nome: input.nome.trim(), chao: input.chao, exige2fa: input.exige2fa, permissoes: input.permissoes })
+      .set({
+        nome: input.nome.trim(),
+        chao: input.chao,
+        exige2fa: exigeMfa({ chao: input.chao, exige2fa: input.exige2fa, permissoes: input.permissoes }),
+        permissoes: input.permissoes,
+      })
       .where(eq(cargo.id, id));
   });
 }
