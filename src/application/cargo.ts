@@ -1,5 +1,5 @@
 import { asc, eq, sql } from "drizzle-orm";
-import { type Permissao, validarCargo } from "@/domain/auth/cargo";
+import { ehCargoDono, type Permissao, validarCargo } from "@/domain/auth/cargo";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
 import { cargo, usuario } from "@/infra/db/schema";
@@ -83,7 +83,10 @@ export async function editarCargo(
   });
 }
 
-/** Renomear vale para qualquer cargo (inclusive de sistema — só o nome). */
+/**
+ * Renomear vale para qualquer cargo (inclusive de sistema — só o nome), EXCETO o Dono: seu nome
+ * é o identificador do gate `cargo:gerir` e nunca pode mudar (trava de domínio, não só de UI).
+ */
 export async function renomearCargo(
   database: Database,
   sessao: SessaoTenant,
@@ -94,6 +97,13 @@ export async function renomearCargo(
     throw new DadosInvalidosError("Dê um nome ao cargo.");
   }
   return database.withTenant(sessao.tenantId, async (tx) => {
+    const [alvo] = await tx.select({ nome: cargo.nome }).from(cargo).where(eq(cargo.id, id)).limit(1);
+    if (!alvo) {
+      throw new DadosInvalidosError("Cargo não encontrado.");
+    }
+    if (ehCargoDono(alvo.nome)) {
+      throw new DadosInvalidosError("O cargo Dono não pode ser renomeado.");
+    }
     await tx.update(cargo).set({ nome: nome.trim() }).where(eq(cargo.id, id));
   });
 }

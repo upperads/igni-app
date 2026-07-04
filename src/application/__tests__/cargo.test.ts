@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { criarCargo, editarCargo, excluirCargo, listarCargos } from "@/application/cargo";
+import { criarCargo, editarCargo, excluirCargo, listarCargos, renomearCargo } from "@/application/cargo";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
 import { cargo, tenant } from "@/infra/db/schema";
@@ -56,5 +56,21 @@ describe("aplicação — cargo (isolado por tenant)", () => {
       tenantId: tenantA, nome: "Dono", sistema: true, chao: false, exige2fa: true, permissoes: ["config:editar"],
     }).returning();
     await expect(excluirCargo(database, sessaoA(), semente!.id)).rejects.toThrow(DadosInvalidosError);
+  });
+
+  it("NÃO permite renomear o cargo Dono (gate imutável)", async () => {
+    const [dono] = await database.db.insert(cargo).values({
+      tenantId: tenantA, nome: "Dono", sistema: true, chao: false, exige2fa: true, permissoes: ["config:editar"],
+    }).returning();
+    await expect(renomearCargo(database, sessaoA(), dono!.id, "Chefe")).rejects.toThrow(DadosInvalidosError);
+  });
+
+  it("permite renomear outro cargo de sistema (ex.: Recepção)", async () => {
+    const [recep] = await database.db.insert(cargo).values({
+      tenantId: tenantA, nome: "Recepção", sistema: true, chao: false, exige2fa: false, permissoes: ["os:abrir"],
+    }).returning();
+    await renomearCargo(database, sessaoA(), recep!.id, "Atendimento");
+    const lista = await listarCargos(database, sessaoA());
+    expect(lista.find((c) => c.id === recep!.id)!.nome).toBe("Atendimento");
   });
 });

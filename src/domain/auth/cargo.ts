@@ -20,6 +20,14 @@ export const PERMISSOES = [
 
 export type Permissao = (typeof PERMISSOES)[number];
 
+/** Nome canônico do cargo-raiz. É o identificador do gate `cargo:gerir` — por isso é imutável. */
+export const CARGO_DONO = "Dono";
+
+/** Se o cargo é o Dono (cargo-raiz imutável): reconhecido pelo nome canônico. */
+export function ehCargoDono(nome: string): boolean {
+  return nome === CARGO_DONO;
+}
+
 /** Permissões que um cargo de chão (quiosque) NUNCA pode ter (Piso 2 — regra de ouro). */
 const PROIBIDAS_NO_CHAO: readonly Permissao[] = ["orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca"];
 
