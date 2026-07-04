@@ -11,7 +11,7 @@ import { convidarMembro, desativarMembro, listarEquipe } from "@/application/equ
 import { estadoImplantacao } from "@/application/implantacao";
 import type { SessaoTenant } from "@/application/abrir-os";
 import type { Database } from "@/infra/db/connection";
-import { estacao, tenant, usuario } from "@/infra/db/schema";
+import { cargo, estacao, tenant, usuario } from "@/infra/db/schema";
 import { FakeAuthIdentity } from "@/test/fake-auth";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
@@ -24,6 +24,8 @@ describe("implantação — isolamento de equipe e estações", () => {
   let database: Database;
   let sessaoA: SessaoTenant;
   let sessaoB: SessaoTenant;
+  let cargoRecepcaoA: string;
+  let cargoProducaoA: string;
 
   beforeAll(async () => {
     await resetAndMigrate();
@@ -37,6 +39,7 @@ describe("implantação — isolamento de equipe e estações", () => {
   beforeEach(async () => {
     await database.db.delete(estacao);
     await database.db.delete(usuario);
+    await database.db.delete(cargo);
     await database.db.delete(tenant);
 
     const [a] = await database.db
@@ -48,13 +51,32 @@ describe("implantação — isolamento de equipe e estações", () => {
       .values({ nome: "Oficina B", templateRamo: "centro_automotivo" })
       .returning();
 
+    const [cargoDonoA] = await database.db
+      .insert(cargo)
+      .values({ tenantId: a!.id, nome: "Dono", sistema: true, chao: false, exige2fa: true, permissoes: ["equipe:gerir", "config:editar"] })
+      .returning();
+    const [cargoRecep] = await database.db
+      .insert(cargo)
+      .values({ tenantId: a!.id, nome: "Recepção", sistema: true, chao: false, exige2fa: false, permissoes: ["os:abrir"] })
+      .returning();
+    const [cargoProd] = await database.db
+      .insert(cargo)
+      .values({ tenantId: a!.id, nome: "Produção", sistema: true, chao: true, exige2fa: false, permissoes: ["os:avancar"] })
+      .returning();
+    const [cargoDonoB] = await database.db
+      .insert(cargo)
+      .values({ tenantId: b!.id, nome: "Dono", sistema: true, chao: false, exige2fa: true, permissoes: ["equipe:gerir", "config:editar"] })
+      .returning();
+    cargoRecepcaoA = cargoRecep!.id;
+    cargoProducaoA = cargoProd!.id;
+
     const [adminA] = await database.db
       .insert(usuario)
-      .values({ tenantId: a!.id, nome: "Admin A", email: "admin@a.com", papel: "dono" })
+      .values({ tenantId: a!.id, nome: "Admin A", email: "admin@a.com", papel: "dono", cargoId: cargoDonoA!.id })
       .returning();
     const [adminB] = await database.db
       .insert(usuario)
-      .values({ tenantId: b!.id, nome: "Admin B", email: "admin@b.com", papel: "dono" })
+      .values({ tenantId: b!.id, nome: "Admin B", email: "admin@b.com", papel: "dono", cargoId: cargoDonoB!.id })
       .returning();
 
     sessaoA = { tenantId: a!.id, usuarioId: adminA!.id };
@@ -116,7 +138,8 @@ describe("implantação — isolamento de equipe e estações", () => {
       await convidarMembro(auth(), sessaoA, {
         nome: "Recep A",
         email: "recep@a.com",
-        papel: "recepcao",
+        cargoId: cargoRecepcaoA,
+        podeGerirCargos: false,
       });
 
       const equipeA = await listarEquipe(database, sessaoA);
@@ -130,7 +153,8 @@ describe("implantação — isolamento de equipe e estações", () => {
       const r = await convidarMembro(auth(), sessaoA, {
         nome: "Sai A",
         email: "sai@a.com",
-        papel: "producao",
+        cargoId: cargoProducaoA,
+        podeGerirCargos: false,
       });
       await desativarMembro(database, sessaoA, r.membroId);
 
@@ -144,7 +168,8 @@ describe("implantação — isolamento de equipe e estações", () => {
       const r = await convidarMembro(auth(), sessaoA, {
         nome: "X",
         email: "x@a.com",
-        papel: "producao",
+        cargoId: cargoProducaoA,
+        podeGerirCargos: false,
       });
       expect(r.senhaProvisoria).toMatch(/^Igni-/);
     });
@@ -164,7 +189,7 @@ describe("implantação — isolamento de equipe e estações", () => {
       await convidarMembro(
         { database, auth: new FakeAuthIdentity() },
         sessaoA,
-        { nome: "Y", email: "y@a.com", papel: "recepcao" },
+        { nome: "Y", email: "y@a.com", cargoId: cargoRecepcaoA, podeGerirCargos: false },
       );
       const est = await estadoImplantacao(database, sessaoA);
       expect(est.temEquipe).toBe(true);

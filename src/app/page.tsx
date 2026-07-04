@@ -19,7 +19,7 @@ export default async function Home() {
   }
 
   // Onboarding só interessa a quem implanta (dono/gestor); produção/recepção vão direto à operação.
-  const podeConfigurar = pode(sessao.papel, "config:editar");
+  const podeConfigurar = pode(sessao.permissoes, "config:editar");
   const [{ kpis, etapas }, historico, implantacao, temDemo] = await Promise.all([
     listarPainel(sessao),
     historicoResponsabilidade(sessao, 30),

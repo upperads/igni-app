@@ -155,6 +155,27 @@
       "when": 1783045690317,
       "tag": "0021_rls_servico",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1783184080228,
+      "tag": "0022_simple_mandroid",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1783184080229,
+      "tag": "0023_rls_cargo",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1783184080230,
+      "tag": "0024_seed_cargo",
+      "breakpoints": true
     }
   ]
 }

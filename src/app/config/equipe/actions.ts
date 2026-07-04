@@ -1,33 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type Acao, pode } from "@/domain/auth/rbac";
-import { PAPEIS, type Papel } from "@/domain/auth/papel";
+import { type Permissao, pode } from "@/domain/auth/cargo";
 import { pinValido } from "@/domain/os/pin";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
   convidarMembroNoTenant,
   desativarMembroNoTenant,
-  mudarPapelNoTenant,
+  mudarCargoNoTenant,
   reativarMembroNoTenant,
 } from "@/infra/composition/equipe";
 import { definirPinNoTenant, limparPinNoTenant } from "@/infra/composition/quiosque";
 
-/** Autorização no boundary: gerir equipe é coisa de administração (dono/gestor). */
-async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
+/** Autorização no boundary: gerir equipe é coisa de administração (cargo com equipe:gerir). */
+async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
   const sessao = await sessaoAtual();
   if (!sessao) {
     return { erro: "Sua sessão expirou. Entre novamente." };
   }
-  if (!pode(sessao.papel, acao)) {
+  if (!pode(sessao.permissoes, acao)) {
     return { erro: "Você não tem permissão para gerenciar a equipe." };
   }
   return { sessao };
-}
-
-function papelValido(valor: string): valor is Papel {
-  return (PAPEIS as readonly string[]).includes(valor);
 }
 
 export interface ResultadoConvite {
@@ -42,17 +37,22 @@ export interface ResultadoConvite {
 export async function acaoConvidarMembro(
   nome: string,
   email: string,
-  papel: string,
+  cargoId: string,
 ): Promise<ResultadoConvite> {
-  const auth = await autorizar("usuario:gerenciar");
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
-  if (!papelValido(papel)) {
-    return { ok: false, motivo: "Selecione um papel válido." };
+  if (!cargoId.trim()) {
+    return { ok: false, motivo: "Selecione um cargo válido." };
   }
   try {
-    const r = await convidarMembroNoTenant(auth.sessao, { nome, email, papel });
+    const r = await convidarMembroNoTenant(auth.sessao, {
+      nome,
+      email,
+      cargoId,
+      podeGerirCargos: auth.sessao.podeGerirCargos,
+    });
     revalidatePath("/config/equipe");
     return { ok: true, senhaProvisoria: r.senhaProvisoria, email: email.trim().toLowerCase() };
   } catch (erro) {
@@ -71,28 +71,28 @@ export interface ResultadoAcao {
   motivo?: string;
 }
 
-export async function acaoMudarPapel(membroId: string, papel: string): Promise<ResultadoAcao> {
-  const auth = await autorizar("usuario:gerenciar");
+export async function acaoMudarCargo(membroId: string, cargoId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
-  if (!papelValido(papel)) {
-    return { ok: false, motivo: "Selecione um papel válido." };
+  if (!cargoId.trim()) {
+    return { ok: false, motivo: "Selecione um cargo válido." };
   }
   try {
-    await mudarPapelNoTenant(auth.sessao, membroId, papel);
+    await mudarCargoNoTenant(auth.sessao, membroId, cargoId, auth.sessao.podeGerirCargos);
     revalidatePath("/config/equipe");
     return { ok: true };
   } catch (erro) {
     if (erro instanceof DadosInvalidosError) {
       return { ok: false, motivo: erro.message };
     }
-    return { ok: false, motivo: "Não foi possível mudar o papel. Tente novamente." };
+    return { ok: false, motivo: "Não foi possível mudar o cargo. Tente novamente." };
   }
 }
 
 export async function acaoDesativarMembro(membroId: string): Promise<ResultadoAcao> {
-  const auth = await autorizar("usuario:gerenciar");
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
@@ -109,7 +109,7 @@ export async function acaoDesativarMembro(membroId: string): Promise<ResultadoAc
 }
 
 export async function acaoReativarMembro(membroId: string): Promise<ResultadoAcao> {
-  const auth = await autorizar("usuario:gerenciar");
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
@@ -124,7 +124,7 @@ export async function acaoReativarMembro(membroId: string): Promise<ResultadoAca
 
 /** Define (ou troca) o PIN de 4 dígitos de um membro de produção — carimbo de autoria no quiosque. */
 export async function acaoDefinirPin(membroId: string, pin: string): Promise<ResultadoAcao> {
-  const auth = await autorizar("usuario:gerenciar");
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
@@ -144,7 +144,7 @@ export async function acaoDefinirPin(membroId: string, pin: string): Promise<Res
 }
 
 export async function acaoLimparPin(membroId: string): Promise<ResultadoAcao> {
-  const auth = await autorizar("usuario:gerenciar");
+  const auth = await autorizar("equipe:gerir");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }

@@ -28,7 +28,7 @@ export default async function RelatorioPage({
     redirect("/login");
   }
   // Relatório de gestão é coisa de gestão; produção não precisa.
-  if (!pode(sessao.papel, "config:editar") && !pode(sessao.papel, "usuario:gerenciar")) {
+  if (!pode(sessao.permissoes, "config:editar") && !pode(sessao.permissoes, "equipe:gerir")) {
     redirect("/");
   }
 

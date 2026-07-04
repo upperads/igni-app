@@ -17,7 +17,7 @@ export default async function ServicosPage() {
     redirect("/login");
   }
   // O catálogo é gerido por quem edita orçamento — dono/gestor/recepção; produção não entra aqui.
-  if (!pode(sessao.papel, "orcamento:editar")) {
+  if (!pode(sessao.permissoes, "orcamento:editar")) {
     redirect("/");
   }
   const servicos = await listarServicosNoTenant(sessao, { incluirInativos: true });

@@ -1,10 +1,11 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { AuthIdentityPort } from "@/application/ports/auth-identity";
-import { exigeMfa, type Papel } from "@/domain/auth/papel";
+import { ehCargoDono, exigeMfa } from "@/domain/auth/cargo";
+import type { Papel } from "@/domain/auth/papel";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
 import { isUniqueViolation } from "@/infra/db/errors";
-import { usuario } from "@/infra/db/schema";
+import { cargo, usuario } from "@/infra/db/schema";
 import type { SessaoTenant } from "./abrir-os";
 
 /**
@@ -13,7 +14,9 @@ import type { SessaoTenant } from "./abrir-os";
  * no provedor com uma SENHA PROVISÓRIA (não depende de SMTP) e a devolve para o dono entregar.
  *
  * Tudo escopado ao tenant corrente (`withTenant` aplica a RLS): um tenant nunca vê/edita a equipe
- * de outro. Papéis administrativos (dono/gestor) já exigem 2FA pela `exigeMfa` — marcado no JWT.
+ * de outro. Cada membro agora é ligado a um CARGO (P-1) — fonte de verdade do RBAC e do 2FA
+ * (`exigeMfa` do domínio de cargo). O `papel` legado continua gravado (compat/relatórios antigos),
+ * mas NÃO manda mais em autorização.
  */
 
 export interface MembroView {
@@ -21,6 +24,9 @@ export interface MembroView {
   nome: string;
   email: string;
   papel: Papel;
+  /** Cargo atribuído (P-1). Nulo só é transitório — todo membro deveria ter cargo. */
+  cargoId: string | null;
+  cargoNome: string;
   ativo: boolean;
   desativadoEm: Date | null;
   /** Não tem identidade ainda (não consegue logar) — raro, mas honesto de mostrar. */
@@ -31,7 +37,9 @@ export interface MembroView {
 export interface ConvidarMembroInput {
   nome: string;
   email: string;
-  papel: Papel;
+  cargoId: string;
+  /** Se o chamador pode nomear outro Dono (piso de segurança contra auto-escalonamento — P-1). */
+  podeGerirCargos: boolean;
 }
 
 export interface ConvidarMembroResult {
@@ -45,7 +53,25 @@ export interface EquipeDeps {
   auth: AuthIdentityPort;
 }
 
-/** Lista a equipe do tenant (ativos primeiro, por nome). */
+/**
+ * Deriva o `papel` legado (enum fixo do banco) a partir do NOME do cargo. É só compatibilidade —
+ * o RBAC não lê mais `papel`. Cargos-semente mapeiam 1:1; cargos customizados caem no piso seguro
+ * (`producao`, o mais restrito).
+ */
+function papelLegadoDoCargo(nomeCargo: string): Papel {
+  if (ehCargoDono(nomeCargo)) {
+    return "dono";
+  }
+  if (nomeCargo === "Gestor") {
+    return "gestor";
+  }
+  if (nomeCargo === "Recepção") {
+    return "recepcao";
+  }
+  return "producao";
+}
+
+/** Lista a equipe do tenant (ativos primeiro, por nome), com o cargo atribuído. */
 export function listarEquipe(database: Database, sessao: SessaoTenant): Promise<MembroView[]> {
   return database.withTenant(sessao.tenantId, async (tx) => {
     const linhas = await tx
@@ -57,8 +83,11 @@ export function listarEquipe(database: Database, sessao: SessaoTenant): Promise<
         authUserId: usuario.authUserId,
         desativadoEm: usuario.desativadoEm,
         criadoEm: usuario.createdAt,
+        cargoId: usuario.cargoId,
+        cargoNome: cargo.nome,
       })
       .from(usuario)
+      .leftJoin(cargo, eq(cargo.id, usuario.cargoId))
       .orderBy(asc(usuario.nome));
 
     return linhas
@@ -67,6 +96,8 @@ export function listarEquipe(database: Database, sessao: SessaoTenant): Promise<
         nome: l.nome,
         email: l.email,
         papel: l.papel,
+        cargoId: l.cargoId,
+        cargoNome: l.cargoNome ?? "",
         ativo: l.desativadoEm === null,
         desativadoEm: l.desativadoEm,
         semAcesso: l.authUserId === null,
@@ -78,7 +109,8 @@ export function listarEquipe(database: Database, sessao: SessaoTenant): Promise<
 
 /**
  * Convida um membro: cria a identidade com senha provisória (passo externo) e a linha `usuario`
- * (RLS). Se a persistência falhar, COMPENSA removendo a identidade órfã (saga, igual ao onboarding).
+ * (RLS), ligada ao CARGO escolhido. Se a persistência falhar, COMPENSA removendo a identidade
+ * órfã (saga, igual ao onboarding). O `requires_mfa` do JWT vem do cargo (piso de 2FA — P-1).
  */
 export async function convidarMembro(
   deps: EquipeDeps,
@@ -95,10 +127,32 @@ export async function convidarMembro(
     throw new DadosInvalidosError("E-mail do membro inválido.");
   }
 
-  // 1) Identidade com senha provisória. Papel admin (dono/gestor) entra exigindo 2FA.
+  // 0) Resolve o cargo alvo DENTRO do tenant (garante que o cargoId pertence a este tenant).
+  const cargoDoAlvo = await deps.database.withTenant(sessao.tenantId, async (tx) => {
+    const [c] = await tx
+      .select({ id: cargo.id, nome: cargo.nome, permissoes: cargo.permissoes, exige2fa: cargo.exige2fa })
+      .from(cargo)
+      .where(eq(cargo.id, input.cargoId))
+      .limit(1);
+    return c ?? null;
+  });
+  if (!cargoDoAlvo) {
+    throw new DadosInvalidosError("Cargo não encontrado.");
+  }
+  // Piso de segurança: só quem já pode gerir cargos (Dono) pode nomear outro Dono. Barrado no
+  // SERVIDOR — não depender só do filtro da UI evita auto-escalonamento (ex.: Gestor chamando a
+  // action direto para se promover ou promover um aliado a Dono).
+  if (ehCargoDono(cargoDoAlvo.nome) && !input.podeGerirCargos) {
+    throw new DadosInvalidosError("Só o Dono pode nomear outro Dono.");
+  }
+
+  const papelLegado = papelLegadoDoCargo(cargoDoAlvo.nome);
+  const requiresMfa = exigeMfa({ chao: false, exige2fa: cargoDoAlvo.exige2fa, permissoes: cargoDoAlvo.permissoes });
+
+  // 1) Identidade com senha provisória. O 2FA exigido vem do cargo (piso, nunca teto).
   const { authUserId, senhaProvisoria } = await deps.auth.criarComSenhaProvisoria({
     email,
-    appMetadata: { papel: input.papel, requires_mfa: exigeMfa(input.papel) },
+    appMetadata: { papel: papelLegado, requires_mfa: requiresMfa },
   });
 
   // 2) Linha na equipe (RLS garante o tenant correto). Falhou? Compensa a identidade.
@@ -106,7 +160,14 @@ export async function convidarMembro(
     const membroId = await deps.database.withTenant(sessao.tenantId, async (tx) => {
       const [novo] = await tx
         .insert(usuario)
-        .values({ tenantId: sessao.tenantId, authUserId, nome, email, papel: input.papel })
+        .values({
+          tenantId: sessao.tenantId,
+          authUserId,
+          nome,
+          email,
+          papel: papelLegado,
+          cargoId: cargoDoAlvo.id,
+        })
         .returning({ id: usuario.id });
       return novo!.id;
     });
@@ -121,30 +182,70 @@ export async function convidarMembro(
 }
 
 /**
- * Muda o papel de um membro. Não permite rebaixar a si mesmo (evita o dono se trancar para fora da
- * administração por engano). O `app_metadata` do JWT NÃO é reescrito aqui — o papel que vale é o do
- * banco (resolvido a cada sessão); o `requires_mfa` do convite permanece, o que é seguro (a favor
- * de exigir 2FA, nunca de afrouxar).
+ * Muda o CARGO de um membro (P-1). Não permite mexer em si mesmo (evita o dono se trancar para
+ * fora da administração por engano). Só quem já pode gerir cargos (Dono) pode PROMOVER alguém a
+ * Dono — piso de segurança contra auto-escalonamento, barrado no SERVIDOR (não só na UI). Piso 1
+ * (último Dono): se o alvo é o único Dono ativo e o novo cargo NÃO é Dono, barra — a oficina
+ * sempre precisa de ao menos um Dono. A CONTAGEM e o UPDATE rodam na MESMA transação (uma única
+ * `withTenant`) para não abrir uma janela TOCTOU entre duas chamadas concorrentes de `mudarCargo`
+ * que, separadas, poderiam zerar os Donos ao mesmo tempo. Atualiza também o `papel` legado
+ * (derivado do nome do novo cargo), mas o RBAC não lê mais esse campo.
  */
-export function mudarPapel(
+export async function mudarCargo(
   database: Database,
   sessao: SessaoTenant,
   membroId: string,
-  papel: Papel,
+  cargoId: string,
+  podeGerirCargos: boolean,
 ): Promise<void> {
   if (membroId === sessao.usuarioId) {
-    throw new DadosInvalidosError("Você não pode mudar o seu próprio papel.");
+    throw new DadosInvalidosError("Você não pode mudar o seu próprio cargo.");
   }
+
   return database.withTenant(sessao.tenantId, async (tx) => {
     const [alvo] = await tx
-      .select({ id: usuario.id })
+      .select({ id: usuario.id, cargoNomeAtual: cargo.nome })
       .from(usuario)
+      .leftJoin(cargo, eq(cargo.id, usuario.cargoId))
       .where(eq(usuario.id, membroId))
       .limit(1);
     if (!alvo) {
       throw new DadosInvalidosError("Membro não encontrado.");
     }
-    await tx.update(usuario).set({ papel }).where(eq(usuario.id, membroId));
+
+    const [novoCargo] = await tx
+      .select({ id: cargo.id, nome: cargo.nome })
+      .from(cargo)
+      .where(eq(cargo.id, cargoId))
+      .limit(1);
+    if (!novoCargo) {
+      throw new DadosInvalidosError("Cargo não encontrado.");
+    }
+
+    const eraDono = alvo.cargoNomeAtual !== null && ehCargoDono(alvo.cargoNomeAtual);
+    const continuaDono = ehCargoDono(novoCargo.nome);
+
+    // Piso de segurança: só quem pode gerir cargos promove alguém a Dono.
+    if (!eraDono && continuaDono && !podeGerirCargos) {
+      throw new DadosInvalidosError("Só o Dono pode nomear outro Dono.");
+    }
+
+    // Piso 1: não rebaixa o último Dono ativo. Contagem NA MESMA transação do update (sem TOCTOU).
+    if (eraDono && !continuaDono) {
+      const [{ n: donos }] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(usuario)
+        .innerJoin(cargo, eq(cargo.id, usuario.cargoId))
+        .where(sql`${cargo.nome} = 'Dono' AND ${usuario.desativadoEm} IS NULL`);
+      if (donos <= 1) {
+        throw new DadosInvalidosError("A oficina precisa de ao menos um Dono.");
+      }
+    }
+
+    await tx
+      .update(usuario)
+      .set({ cargoId: novoCargo.id, papel: papelLegadoDoCargo(novoCargo.nome) })
+      .where(eq(usuario.id, membroId));
   });
 }
 

@@ -22,6 +22,7 @@ const NAV = [
 const NAV_CONFIG = [
   { href: "/config/equipe", rotulo: "Equipe" },
   { href: "/config/estacoes", rotulo: "Estações" },
+  { href: "/config/cargos", rotulo: "Cargos" },
 ] as const;
 
 // Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; o resto é de desktop.
@@ -54,7 +55,7 @@ interface Props {
  */
 export async function AppShell({ children, alarme = false, setor }: Props) {
   const sessao = await sessaoAtual();
-  const podeConfigurar = sessao ? pode(sessao.papel, "config:editar") : false;
+  const podeConfigurar = sessao ? pode(sessao.permissoes, "config:editar") : false;
   const nav = podeConfigurar ? [...NAV, ...NAV_CONFIG] : NAV;
   const nomeOficina = sessao?.tenantNome ?? "Igni";
   return (

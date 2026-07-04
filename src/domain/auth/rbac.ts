@@ -1,41 +1,15 @@
 import { AutorizacaoNegadaError } from "@/domain/shared/errors";
-import type { Papel } from "./papel";
+import { type Permissao, pode } from "./cargo";
 
 /**
- * RBAC (RNF-SEC-02 / US-03). Ações são as MUTAÇÕES sensíveis do sistema; leitura é liberada a
- * todos os papéis autenticados. A UI usa `pode` para deixar campos read-only/ocultos; o servidor
- * usa `assertPode` para barrar de verdade (a checagem que vale é a do servidor).
+ * RBAC (P-1): agora opera sobre o CONJUNTO DE PERMISSÕES do cargo, não sobre o papel fixo.
+ * `pode` vem do domínio de cargo. `assertPode` é o enforcement do servidor.
  */
-export const ACOES = [
-  "os:abrir",
-  "os:editar",
-  "os:avancar",
-  "orcamento:editar",
-  "cadastro:editar",
-  "triagem:override",
-  "usuario:gerenciar",
-  "config:editar",
-] as const;
+export { pode } from "./cargo";
+export type { Permissao } from "./cargo";
 
-export type Acao = (typeof ACOES)[number];
-
-const PERMISSOES: Record<Papel, readonly Acao[]> = {
-  // Tier administrativo (exige 2FA): acesso total às ações modeladas.
-  dono: ACOES,
-  gestor: ACOES,
-  // Recepção/orçamentista: opera OS, orçamento, cadastros e triagem; não administra o sistema.
-  recepcao: ["os:abrir", "os:editar", "os:avancar", "orcamento:editar", "cadastro:editar", "triagem:override"],
-  // Produção (chão): só avança etapas pelo bump. NÃO edita orçamento (regra de ouro do CLAUDE.md).
-  producao: ["os:avancar"],
-};
-
-export function pode(papel: Papel, acao: Acao): boolean {
-  return PERMISSOES[papel].includes(acao);
-}
-
-/** Enforcement no servidor: lança `AutorizacaoNegadaError` se o papel não pode a ação. */
-export function assertPode(papel: Papel, acao: Acao): void {
-  if (!pode(papel, acao)) {
-    throw new AutorizacaoNegadaError(papel, acao);
+export function assertPode(permissoes: readonly string[], acao: Permissao): void {
+  if (!pode(permissoes, acao)) {
+    throw new AutorizacaoNegadaError("cargo", acao);
   }
 }

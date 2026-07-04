@@ -6,10 +6,9 @@ import {
   desativarMembro,
   listarEquipe,
   type MembroView,
-  mudarPapel,
+  mudarCargo,
   reativarMembro,
 } from "@/application/equipe";
-import type { Papel } from "@/domain/auth/papel";
 import { createSupabaseAuthIdentity } from "@/infra/auth/supabase-identity";
 import { database } from "@/infra/db/client";
 
@@ -47,12 +46,13 @@ export function convidarMembroNoTenant(
   return convidarMembro({ database, auth: authIdentity() }, sessao, input);
 }
 
-export function mudarPapelNoTenant(
+export function mudarCargoNoTenant(
   sessao: SessaoTenant,
   membroId: string,
-  papel: Papel,
+  cargoId: string,
+  podeGerirCargos: boolean,
 ): Promise<void> {
-  return mudarPapel(database, sessao, membroId, papel);
+  return mudarCargo(database, sessao, membroId, cargoId, podeGerirCargos);
 }
 
 export function desativarMembroNoTenant(sessao: SessaoTenant, membroId: string): Promise<void> {

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { PAPEIS, type Papel } from "@/domain/auth/papel";
+import { ehCargoDono } from "@/domain/auth/cargo";
 import { pinValido } from "@/domain/os/pin";
 import type { MembroView } from "@/infra/composition/equipe";
 import {
@@ -10,31 +10,24 @@ import {
   acaoDefinirPin,
   acaoDesativarMembro,
   acaoLimparPin,
-  acaoMudarPapel,
+  acaoMudarCargo,
   acaoReativarMembro,
 } from "./actions";
 
-const ROTULO_PAPEL: Record<Papel, string> = {
-  dono: "Dono",
-  gestor: "Gestor",
-  recepcao: "Recepção",
-  producao: "Produção",
-};
-
-const AJUDA_PAPEL: Record<Papel, string> = {
-  dono: "Administra tudo. Exige 2FA.",
-  gestor: "Administra tudo. Exige 2FA.",
-  recepcao: "Abre OS, orça, atende o cliente.",
-  producao: "Só avança etapas no chão. 1 toque.",
-};
+export interface CargoOpcao {
+  id: string;
+  nome: string;
+}
 
 interface Props {
   equipe: MembroView[];
   /** Id do usuário logado — para não deixar mexer em si mesmo. */
   meuId: string;
+  /** Cargos do tenant, para o seletor de convite e de troca de cargo. */
+  cargos: CargoOpcao[];
 }
 
-export function PainelEquipe({ equipe, meuId }: Props) {
+export function PainelEquipe({ equipe, meuId, cargos }: Props) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
@@ -64,10 +57,11 @@ export function PainelEquipe({ equipe, meuId }: Props) {
 
       <FormConvite
         pendente={pendente}
-        onConvidar={(nome, email, papel) =>
+        cargos={cargos}
+        onConvidar={(nome, email, cargoId) =>
           iniciar(async () => {
             setErro(null);
-            const r = await acaoConvidarMembro(nome, email, papel);
+            const r = await acaoConvidarMembro(nome, email, cargoId);
             if (!r.ok) {
               setErro(r.motivo ?? "Não foi possível convidar.");
               return;
@@ -87,7 +81,8 @@ export function PainelEquipe({ equipe, meuId }: Props) {
             membro={m}
             souEu={m.id === meuId}
             pendente={pendente}
-            onMudarPapel={(papel) => rodar(() => acaoMudarPapel(m.id, papel))}
+            cargos={cargos}
+            onMudarCargo={(cargoId) => rodar(() => acaoMudarCargo(m.id, cargoId))}
             onDesativar={() => rodar(() => acaoDesativarMembro(m.id))}
             onReativar={() => rodar(() => acaoReativarMembro(m.id))}
             onDefinirPin={(pin) => rodar(() => acaoDefinirPin(m.id, pin))}
@@ -107,23 +102,25 @@ export function PainelEquipe({ equipe, meuId }: Props) {
 
 function FormConvite({
   pendente,
+  cargos,
   onConvidar,
 }: {
   pendente: boolean;
-  onConvidar: (nome: string, email: string, papel: Papel) => void;
+  cargos: CargoOpcao[];
+  onConvidar: (nome: string, email: string, cargoId: string) => void;
 }) {
+  const cargosConvidaveis = cargos.filter((c) => !ehCargoDono(c.nome));
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [papel, setPapel] = useState<Papel>("producao");
+  const [cargoId, setCargoId] = useState(cargosConvidaveis[0]?.id ?? "");
 
   function enviar() {
-    if (!nome.trim() || !email.trim()) {
+    if (!nome.trim() || !email.trim() || !cargoId) {
       return;
     }
-    onConvidar(nome, email, papel);
+    onConvidar(nome, email, cargoId);
     setNome("");
     setEmail("");
-    setPapel("producao");
   }
 
   return (
@@ -150,23 +147,22 @@ function FormConvite({
           className="rounded-md border border-grafite-600 bg-grafite-900 px-3 py-2 font-body text-sm text-aco-100 placeholder:text-aco-500 focus:border-ambar-500 focus:outline-none"
         />
         <select
-          value={papel}
-          onChange={(e) => setPapel(e.target.value as Papel)}
-          aria-label="Papel"
+          value={cargoId}
+          onChange={(e) => setCargoId(e.target.value)}
+          aria-label="Cargo"
           className="rounded-md border border-grafite-600 bg-grafite-900 px-3 py-2 font-body text-sm text-aco-100 focus:border-ambar-500 focus:outline-none"
         >
-          {PAPEIS.filter((p) => p !== "dono").map((p) => (
-            <option key={p} value={p}>
-              {ROTULO_PAPEL[p]}
+          {cargosConvidaveis.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
             </option>
           ))}
         </select>
       </div>
-      <p className="mt-2 font-mono text-xs text-aco-500">{AJUDA_PAPEL[papel]}</p>
       <button
         type="button"
         onClick={enviar}
-        disabled={pendente || !nome.trim() || !email.trim()}
+        disabled={pendente || !nome.trim() || !email.trim() || !cargoId}
         className="mt-3 rounded-md bg-ambar-500 px-4 py-2 font-display text-sm font-bold text-grafite-900 transition-colors hover:bg-ambar-600 disabled:opacity-50"
       >
         {pendente ? "Convidando…" : "Convidar"}
@@ -229,7 +225,8 @@ function LinhaMembro({
   membro,
   souEu,
   pendente,
-  onMudarPapel,
+  cargos,
+  onMudarCargo,
   onDesativar,
   onReativar,
   onDefinirPin,
@@ -238,13 +235,16 @@ function LinhaMembro({
   membro: MembroView;
   souEu: boolean;
   pendente: boolean;
-  onMudarPapel: (papel: Papel) => void;
+  cargos: CargoOpcao[];
+  onMudarCargo: (cargoId: string) => void;
   onDesativar: () => void;
   onReativar: () => void;
   onDefinirPin: (pin: string) => void;
   onLimparPin: () => void;
 }) {
   const [confirmando, setConfirmando] = useState(false);
+  const ehDono = ehCargoDono(membro.cargoNome);
+  const cargosSelecionaveis = ehDono ? cargos : cargos.filter((c) => !ehCargoDono(c.nome));
 
   return (
     <li
@@ -267,21 +267,21 @@ function LinhaMembro({
       </div>
 
         {/* Dono não muda pelo select (é a âncora administrativa); a si mesmo, ninguém mexe. */}
-        {membro.papel === "dono" || souEu ? (
+        {ehDono || souEu ? (
           <span className="rounded-md bg-grafite-700 px-3 py-1.5 font-mono text-xs text-aco-300">
-            {ROTULO_PAPEL[membro.papel]}
+            {membro.cargoNome || "Sem cargo"}
           </span>
         ) : (
           <select
-            value={membro.papel}
-            onChange={(e) => onMudarPapel(e.target.value as Papel)}
+            value={membro.cargoId ?? ""}
+            onChange={(e) => onMudarCargo(e.target.value)}
             disabled={pendente || !membro.ativo}
-            aria-label={`Papel de ${membro.nome}`}
+            aria-label={`Cargo de ${membro.nome}`}
             className="rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 font-mono text-xs text-aco-200 focus:border-ambar-500 focus:outline-none disabled:opacity-50"
           >
-            {PAPEIS.filter((p) => p !== "dono").map((p) => (
-              <option key={p} value={p}>
-                {ROTULO_PAPEL[p]}
+            {cargosSelecionaveis.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome}
               </option>
             ))}
           </select>
@@ -328,7 +328,7 @@ function LinhaMembro({
         )}
       </div>
 
-      {membro.papel === "producao" && membro.ativo ? (
+      {membro.cargoNome === "Produção" && membro.ativo ? (
         <PinMembro
           nome={membro.nome}
           pendente={pendente}

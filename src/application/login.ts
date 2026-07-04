@@ -1,6 +1,7 @@
 import type { AuthSignInPort } from "@/application/ports/auth-signin";
 import { avaliarLockout, type PoliticaLockout } from "@/domain/auth/lockout";
-import { exigeMfa, type Papel } from "@/domain/auth/papel";
+import { exigeMfa } from "@/domain/auth/cargo";
+import type { Papel } from "@/domain/auth/papel";
 import { ContaBloqueadaError, CredenciaisInvalidasError } from "@/domain/shared/errors";
 import type { AppDatabase } from "@/infra/db/connection";
 import { resolverPerfilPorAuthUserId } from "@/infra/auth/perfil-repo";
@@ -74,6 +75,7 @@ export async function login(deps: LoginDeps, input: LoginInput): Promise<LoginRe
     usuarioId: perfil.usuarioId,
     tenantId: perfil.tenantId,
     papel: perfil.papel,
-    mfaRequerido: exigeMfa(perfil.papel) && !signIn.aal2,
+    mfaRequerido:
+      exigeMfa({ chao: false, exige2fa: perfil.exige2fa, permissoes: perfil.permissoes }) && !signIn.aal2,
   };
 }

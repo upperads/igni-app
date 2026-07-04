@@ -66,8 +66,8 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
     listarEstacoesNoTenant(sessao),
     listarServicosNoTenant(sessao),
   ]);
-  const podeEditarOrcamento = pode(sessao.papel, "orcamento:editar");
-  const podeEditarOs = pode(sessao.papel, "os:editar");
+  const podeEditarOrcamento = pode(sessao.permissoes, "orcamento:editar");
+  const podeEditarOs = pode(sessao.permissoes, "os:editar");
   const proximos = proximosEstados(os.estado);
   const perguntas = quatroPerguntas(os.estado);
   const diasRestantes = diasRestantesAte(os.prazoPrometido, new Date());
