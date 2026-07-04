@@ -3,20 +3,32 @@
 > Frentes de EVOLUÇÃO DO PRODUTO levantadas pelo dono em 01–02/07/2026, durante a varredura de
 > qualidade. São maiores que polimento — cada uma merece planejamento próprio (`/produto` / `/prioriza`),
 > não ser espremida numa fatia de correção. Registradas aqui pra não se perderem. **Entregues até aqui:
-> P-0 (Quiosque + PIN) e P-2 (Catálogo de preços). Próximo: P-1 (papéis/setores).**
+> P-0 (Quiosque + PIN), P-2 (Catálogo de preços) e P-1 (Cargos configuráveis). Próximo: P-3 (controle
+> remoto de TV) e P-4 (financeiro).**
 
-## P-1. Nomenclatura e estrutura de setores/papéis
+## P-1. ✅ NO AR (04/07/2026) — Cargos configuráveis por tenant
 **A dor (nas palavras do dono):** *"por que a equipe teria senha se eles vão ter a TV pra acompanhar?"* +
 *"precisa pôr a nomenclatura correta das funções da equipe: Produção, Financeiro, Compras, Pós-venda…"*
 
-**Estado atual (verificado no código):** os papéis são `dono / gestor / recepcao / producao` (`domain/auth/papel.ts`).
-- `producao` = equipe do chão; loga **para dar o bump** (avançar OS no `/chao`, 1 toque) — é o que gera a
-  métrica de adoção do chão. Não é "só assistir a TV": eles TOCAM o fluxo.
-- A confusão é legítima: a nomenclatura é genérica e não reflete a estrutura real de uma retífica.
+**Entregue:** os 4 papéis fixos viraram **cargos configuráveis por tenant** — nome livre + permissões de um
+**catálogo fixo** de 10 chaves que o código sabe fazer valer. Cada tenant nasce com **7 cargos-semente**
+(Dono, Gestor, Recepção, Produção + os novos **Financeiro**, **Peças/Compras**, **Pós-venda**). Tela
+**`/config/cargos`** (gate exclusivo do Dono) com matriz de permissões e os 4 pisos ao vivo. A Equipe passa a
+atribuir cargo (não papel). O RBAC opera sobre as permissões do cargo (o enum `papel` virou legado tolerado).
+Desenho validado por pesquisa de mercado (Tekmetric/GestãoClick/vhsys + padrão RBAC de GitHub/Slack/Stripe).
 
-**A oportunidade:** modelar os **setores reais** (Produção, Financeiro, Compras, Pós-venda…) e o que cada
-um faz/vê. Isso destrava features que hoje não existem (financeiro, compras). Decisão de arquitetura de
-papéis — precisa de `/produto` antes de código. Conecta com o RBAC existente (`rbac.ts`).
+**Os 4 pisos de segurança (invariantes testados):** (1) cargo Dono imutável — nome travado, não editável/
+excluível — + sempre ≥1 Dono ativo (trava do último Dono); (2) cargo de chão NÃO vê dinheiro nem edita
+orçamento (regra de ouro travada); (3) 2FA é piso nunca teto — permissão-gatilho força 2FA no servidor,
+`dinheiro:ver` não dispara (recepção segue sem 2FA); (4) isolamento por tenant absoluto (RLS, migrations
+0022–0024, testado A↔B + teste da ligação do seed com dados pré-existentes). `cargo:gerir` é exclusivo do
+Dono (fora do catálogo atribuível) → sem auto-escalonamento; barrado também no servidor. Onboarding semeia
+os cargos para tenants novos. Spec/plano: `docs/superpowers/specs/2026-07-03-cargos-configuraveis-design.md`.
+
+**Fica para fatias futuras:** esconder valores na LEITURA por `dinheiro:ver` (hoje o gate só controla editar);
+escopo de dados por cargo ("ver só as OS próprias"); slot de PIN para cargos de chão customizados; remoção
+do enum `papel`. Os módulos que dão poder pleno aos cargos novos (Financeiro=P-4, peças/compras, pós-venda)
+chegam com suas telas.
 
 ## P-2. ✅ NO AR (03/07/2026) — Catálogo de serviços com preço
 **A dor:** *"o Igni não tem precificação, adição de serviços já pré-definidos etc., tem que colocar sempre
@@ -95,9 +107,9 @@ Grande; provavelmente depois de P-1 (papéis) e P-2 (preços), que são pré-req
 ## Ordem sugerida (a validar com /prioriza)
 - ✅ **P-0 (quiosque + PIN)** — NO AR (03/07).
 - ✅ **P-2 (catálogo de preços)** — NO AR (03/07).
-1. **P-1 (papéis/setores)** — é base: define quem vê/faz o quê, e destrava P-4. **← próximo**
-2. **P-3 (controle remoto de TV)** — melhora a operação de chão; o realtime já dá a fundação.
-3. **P-4 (financeiro)** — maior, depende de P-1/P-2.
+- ✅ **P-1 (cargos configuráveis)** — NO AR (04/07). Base pronta: define quem vê/faz o quê; destrava P-4.
+1. **P-3 (controle remoto de TV)** — melhora a operação de chão; o realtime já dá a fundação. **← próximo**
+2. **P-4 (financeiro)** — maior; os cargos (P-1) e os preços (P-2) já são a fundação.
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
