@@ -50,8 +50,9 @@ export function mudarCargoNoTenant(
   sessao: SessaoTenant,
   membroId: string,
   cargoId: string,
+  podeGerirCargos: boolean,
 ): Promise<void> {
-  return mudarCargo(database, sessao, membroId, cargoId);
+  return mudarCargo(database, sessao, membroId, cargoId, podeGerirCargos);
 }
 
 export function desativarMembroNoTenant(sessao: SessaoTenant, membroId: string): Promise<void> {

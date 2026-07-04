@@ -139,6 +139,7 @@ describe("implantação — isolamento de equipe e estações", () => {
         nome: "Recep A",
         email: "recep@a.com",
         cargoId: cargoRecepcaoA,
+        podeGerirCargos: false,
       });
 
       const equipeA = await listarEquipe(database, sessaoA);
@@ -153,6 +154,7 @@ describe("implantação — isolamento de equipe e estações", () => {
         nome: "Sai A",
         email: "sai@a.com",
         cargoId: cargoProducaoA,
+        podeGerirCargos: false,
       });
       await desativarMembro(database, sessaoA, r.membroId);
 
@@ -167,6 +169,7 @@ describe("implantação — isolamento de equipe e estações", () => {
         nome: "X",
         email: "x@a.com",
         cargoId: cargoProducaoA,
+        podeGerirCargos: false,
       });
       expect(r.senhaProvisoria).toMatch(/^Igni-/);
     });
@@ -186,7 +189,7 @@ describe("implantação — isolamento de equipe e estações", () => {
       await convidarMembro(
         { database, auth: new FakeAuthIdentity() },
         sessaoA,
-        { nome: "Y", email: "y@a.com", cargoId: cargoRecepcaoA },
+        { nome: "Y", email: "y@a.com", cargoId: cargoRecepcaoA, podeGerirCargos: false },
       );
       const est = await estadoImplantacao(database, sessaoA);
       expect(est.temEquipe).toBe(true);

@@ -47,7 +47,12 @@ export async function acaoConvidarMembro(
     return { ok: false, motivo: "Selecione um cargo válido." };
   }
   try {
-    const r = await convidarMembroNoTenant(auth.sessao, { nome, email, cargoId });
+    const r = await convidarMembroNoTenant(auth.sessao, {
+      nome,
+      email,
+      cargoId,
+      podeGerirCargos: auth.sessao.podeGerirCargos,
+    });
     revalidatePath("/config/equipe");
     return { ok: true, senhaProvisoria: r.senhaProvisoria, email: email.trim().toLowerCase() };
   } catch (erro) {
@@ -75,7 +80,7 @@ export async function acaoMudarCargo(membroId: string, cargoId: string): Promise
     return { ok: false, motivo: "Selecione um cargo válido." };
   }
   try {
-    await mudarCargoNoTenant(auth.sessao, membroId, cargoId);
+    await mudarCargoNoTenant(auth.sessao, membroId, cargoId, auth.sessao.podeGerirCargos);
     revalidatePath("/config/equipe");
     return { ok: true };
   } catch (erro) {

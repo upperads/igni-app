@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import type { AuthIdentityPort } from "@/application/ports/auth-identity";
 import { ehCargoDono, exigeMfa } from "@/domain/auth/cargo";
 import type { Papel } from "@/domain/auth/papel";
@@ -6,7 +6,6 @@ import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/err
 import type { Database } from "@/infra/db/connection";
 import { isUniqueViolation } from "@/infra/db/errors";
 import { cargo, usuario } from "@/infra/db/schema";
-import { contarUsuariosComCargoDono } from "./cargo";
 import type { SessaoTenant } from "./abrir-os";
 
 /**
@@ -39,6 +38,8 @@ export interface ConvidarMembroInput {
   nome: string;
   email: string;
   cargoId: string;
+  /** Se o chamador pode nomear outro Dono (piso de segurança contra auto-escalonamento — P-1). */
+  podeGerirCargos: boolean;
 }
 
 export interface ConvidarMembroResult {
@@ -138,6 +139,12 @@ export async function convidarMembro(
   if (!cargoDoAlvo) {
     throw new DadosInvalidosError("Cargo não encontrado.");
   }
+  // Piso de segurança: só quem já pode gerir cargos (Dono) pode nomear outro Dono. Barrado no
+  // SERVIDOR — não depender só do filtro da UI evita auto-escalonamento (ex.: Gestor chamando a
+  // action direto para se promover ou promover um aliado a Dono).
+  if (ehCargoDono(cargoDoAlvo.nome) && !input.podeGerirCargos) {
+    throw new DadosInvalidosError("Só o Dono pode nomear outro Dono.");
+  }
 
   const papelLegado = papelLegadoDoCargo(cargoDoAlvo.nome);
   const requiresMfa = exigeMfa({ chao: false, exige2fa: cargoDoAlvo.exige2fa, permissoes: cargoDoAlvo.permissoes });
@@ -176,50 +183,65 @@ export async function convidarMembro(
 
 /**
  * Muda o CARGO de um membro (P-1). Não permite mexer em si mesmo (evita o dono se trancar para
- * fora da administração por engano). Piso 1 (último Dono): se o alvo é o único Dono ativo e o
- * novo cargo NÃO é Dono, barra — a oficina sempre precisa de ao menos um Dono. Atualiza também o
- * `papel` legado (derivado do nome do novo cargo), mas o RBAC não lê mais esse campo.
+ * fora da administração por engano). Só quem já pode gerir cargos (Dono) pode PROMOVER alguém a
+ * Dono — piso de segurança contra auto-escalonamento, barrado no SERVIDOR (não só na UI). Piso 1
+ * (último Dono): se o alvo é o único Dono ativo e o novo cargo NÃO é Dono, barra — a oficina
+ * sempre precisa de ao menos um Dono. A CONTAGEM e o UPDATE rodam na MESMA transação (uma única
+ * `withTenant`) para não abrir uma janela TOCTOU entre duas chamadas concorrentes de `mudarCargo`
+ * que, separadas, poderiam zerar os Donos ao mesmo tempo. Atualiza também o `papel` legado
+ * (derivado do nome do novo cargo), mas o RBAC não lê mais esse campo.
  */
 export async function mudarCargo(
   database: Database,
   sessao: SessaoTenant,
   membroId: string,
   cargoId: string,
+  podeGerirCargos: boolean,
 ): Promise<void> {
   if (membroId === sessao.usuarioId) {
     throw new DadosInvalidosError("Você não pode mudar o seu próprio cargo.");
   }
 
-  const [alvo] = await database.withTenant(sessao.tenantId, (tx) =>
-    tx
+  return database.withTenant(sessao.tenantId, async (tx) => {
+    const [alvo] = await tx
       .select({ id: usuario.id, cargoNomeAtual: cargo.nome })
       .from(usuario)
       .leftJoin(cargo, eq(cargo.id, usuario.cargoId))
       .where(eq(usuario.id, membroId))
-      .limit(1),
-  );
-  if (!alvo) {
-    throw new DadosInvalidosError("Membro não encontrado.");
-  }
-
-  const [novoCargo] = await database.withTenant(sessao.tenantId, (tx) =>
-    tx.select({ id: cargo.id, nome: cargo.nome }).from(cargo).where(eq(cargo.id, cargoId)).limit(1),
-  );
-  if (!novoCargo) {
-    throw new DadosInvalidosError("Cargo não encontrado.");
-  }
-
-  // Piso 1: não rebaixa o último Dono ativo.
-  const eraDono = alvo.cargoNomeAtual !== null && ehCargoDono(alvo.cargoNomeAtual);
-  const continuaDono = ehCargoDono(novoCargo.nome);
-  if (eraDono && !continuaDono) {
-    const donos = await contarUsuariosComCargoDono(database, sessao);
-    if (donos <= 1) {
-      throw new DadosInvalidosError("A oficina precisa de ao menos um Dono.");
+      .limit(1);
+    if (!alvo) {
+      throw new DadosInvalidosError("Membro não encontrado.");
     }
-  }
 
-  return database.withTenant(sessao.tenantId, async (tx) => {
+    const [novoCargo] = await tx
+      .select({ id: cargo.id, nome: cargo.nome })
+      .from(cargo)
+      .where(eq(cargo.id, cargoId))
+      .limit(1);
+    if (!novoCargo) {
+      throw new DadosInvalidosError("Cargo não encontrado.");
+    }
+
+    const eraDono = alvo.cargoNomeAtual !== null && ehCargoDono(alvo.cargoNomeAtual);
+    const continuaDono = ehCargoDono(novoCargo.nome);
+
+    // Piso de segurança: só quem pode gerir cargos promove alguém a Dono.
+    if (!eraDono && continuaDono && !podeGerirCargos) {
+      throw new DadosInvalidosError("Só o Dono pode nomear outro Dono.");
+    }
+
+    // Piso 1: não rebaixa o último Dono ativo. Contagem NA MESMA transação do update (sem TOCTOU).
+    if (eraDono && !continuaDono) {
+      const [{ n: donos }] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(usuario)
+        .innerJoin(cargo, eq(cargo.id, usuario.cargoId))
+        .where(sql`${cargo.nome} = 'Dono' AND ${usuario.desativadoEm} IS NULL`);
+      if (donos <= 1) {
+        throw new DadosInvalidosError("A oficina precisa de ao menos um Dono.");
+      }
+    }
+
     await tx
       .update(usuario)
       .set({ cargoId: novoCargo.id, papel: papelLegadoDoCargo(novoCargo.nome) })
