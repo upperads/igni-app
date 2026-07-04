@@ -1,9 +1,10 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { criarOficina, type CriarOficinaInput } from "@/application/criar-oficina";
+import { CARGOS_SEMENTE } from "@/domain/auth/cargo";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { estacao, tenant, usuario } from "@/infra/db/schema";
+import { cargo, estacao, tenant, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 import { FakeAuthIdentity } from "@/test/fake-auth";
 
@@ -31,6 +32,7 @@ describe("criarOficina (US-01)", () => {
 
   beforeEach(async () => {
     await database.db.delete(usuario);
+    await database.db.delete(cargo);
     await database.db.delete(estacao);
     await database.db.delete(tenant);
     auth = new FakeAuthIdentity();
@@ -57,6 +59,20 @@ describe("criarOficina (US-01)", () => {
 
     const estacoes = await database.db.select().from(estacao).where(eq(estacao.tenantId, res.tenantId));
     expect(estacoes).toHaveLength(res.estacoesCriadas);
+  });
+
+  it("semeia os 7 cargos-semente do tenant novo e liga o admin ao cargo Dono (P-1)", async () => {
+    const res = await criarOficina({ db: database.db, auth }, inputBase());
+
+    const cargos = await database.db.select().from(cargo).where(eq(cargo.tenantId, res.tenantId));
+    expect(cargos).toHaveLength(CARGOS_SEMENTE.length);
+    expect(cargos.map((c) => c.nome).sort()).toEqual(CARGOS_SEMENTE.map((c) => c.nome).sort());
+
+    const cargoDono = cargos.find((c) => c.nome === "Dono");
+    expect(cargoDono).toBeTruthy();
+
+    const [admin] = await database.db.select().from(usuario).where(eq(usuario.id, res.adminId));
+    expect(admin?.cargoId).toBe(cargoDono!.id);
   });
 
   it("rejeita e-mail duplicado (no provedor) com erro de domínio e não cria a segunda oficina", async () => {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import QRCode from "qrcode";
-import { type Acao, pode } from "@/domain/auth/rbac";
+import { type Permissao, pode } from "@/domain/auth/cargo";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
@@ -17,12 +17,12 @@ import {
 } from "@/infra/composition/quiosque";
 
 /** Autorização no boundary: estações são configuração — só gestão (dono/gestor) ajusta. */
-async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
+async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
   const sessao = await sessaoAtual();
   if (!sessao) {
     return { erro: "Sua sessão expirou. Entre novamente." };
   }
-  if (!pode(sessao.papel, acao)) {
+  if (!pode(sessao.permissoes, acao)) {
     return { erro: "Você não tem permissão para configurar as estações." };
   }
   return { sessao };

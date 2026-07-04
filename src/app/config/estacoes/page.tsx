@@ -18,7 +18,7 @@ export default async function EstacoesPage() {
     redirect("/login");
   }
   // Configuração da oficina é coisa de gestão; produção e recepção não configuram estações.
-  if (!pode(sessao.papel, "config:editar")) {
+  if (!pode(sessao.permissoes, "config:editar")) {
     redirect("/");
   }
 

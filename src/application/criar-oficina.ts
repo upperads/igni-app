@@ -1,9 +1,10 @@
 import type { AuthIdentityPort } from "@/application/ports/auth-identity";
+import { CARGO_DONO, CARGOS_SEMENTE } from "@/domain/auth/cargo";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
 import { estacoesDoRamo, type Ramo } from "@/domain/templates/ramo";
 import type { AppDatabase } from "@/infra/db/connection";
 import { isUniqueViolation } from "@/infra/db/errors";
-import { estacao, tenant, usuario } from "@/infra/db/schema";
+import { cargo, estacao, tenant, usuario } from "@/infra/db/schema";
 
 /** Tamanho mínimo de senha aceito pelo onboarding (alinhado ao Supabase Auth local). */
 export const SENHA_MIN_LENGTH = 8;
@@ -67,7 +68,9 @@ export async function criarOficina(
     appMetadata: { papel: "dono", requires_mfa: true },
   });
 
-  // 2) Persiste o tenant + admin + estações. Se falhar, compensa a identidade (passo 3).
+  // 2) Persiste o tenant + admin + estações + os 7 cargos-semente (P-1). Se falhar, compensa a
+  //    identidade (passo 3). Sem os cargos-semente aqui, o tenant nasceria sem RBAC funcional —
+  //    o admin logaria sem NENHUMA permissão (o cargo é a fonte de verdade, não mais o `papel`).
   try {
     return await deps.db.transaction(async (tx) => {
       const [oficina] = await tx
@@ -75,9 +78,34 @@ export async function criarOficina(
         .values({ nome: nomeOficina, templateRamo: input.ramo })
         .returning({ id: tenant.id });
 
+      const cargosCriados = await tx
+        .insert(cargo)
+        .values(
+          CARGOS_SEMENTE.map((c) => ({
+            tenantId: oficina!.id,
+            nome: c.nome,
+            sistema: c.sistema,
+            chao: c.chao,
+            exige2fa: c.exige2fa,
+            permissoes: [...c.permissoes],
+          })),
+        )
+        .returning({ id: cargo.id, nome: cargo.nome });
+      const cargoDono = cargosCriados.find((c) => c.nome === CARGO_DONO);
+      if (!cargoDono) {
+        throw new Error("Falha ao semear o cargo Dono do tenant novo.");
+      }
+
       const [admin] = await tx
         .insert(usuario)
-        .values({ tenantId: oficina!.id, authUserId, nome: adminNome, email, papel: "dono" })
+        .values({
+          tenantId: oficina!.id,
+          authUserId,
+          nome: adminNome,
+          email,
+          papel: "dono",
+          cargoId: cargoDono.id,
+        })
         .returning({ id: usuario.id });
 
       if (estacoes.length > 0) {

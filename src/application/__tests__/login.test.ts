@@ -3,7 +3,7 @@ import { login, type LoginDeps } from "@/application/login";
 import type { PoliticaLockout } from "@/domain/auth/lockout";
 import { ContaBloqueadaError, CredenciaisInvalidasError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { tenant, tentativaLogin, usuario } from "@/infra/db/schema";
+import { cargo, tenant, tentativaLogin, usuario } from "@/infra/db/schema";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 import { FakeAuthSignIn } from "@/test/fake-signin";
 
@@ -32,18 +32,45 @@ describe("login (US-02)", () => {
   beforeEach(async () => {
     await database.db.delete(tentativaLogin);
     await database.db.delete(usuario);
+    await database.db.delete(cargo);
     await database.db.delete(tenant);
 
     const [t] = await database.db
       .insert(tenant)
       .values({ nome: "Oficina", templateRamo: "retifica_leve" })
       .returning({ id: tenant.id });
+
+    // Cargo Dono: exige 2FA (piso). Cargo Produção: não exige.
+    const [cargoDono] = await database.db
+      .insert(cargo)
+      .values({
+        tenantId: t!.id,
+        nome: "Dono",
+        sistema: true,
+        chao: false,
+        exige2fa: true,
+        permissoes: ["equipe:gerir", "config:editar"],
+      })
+      .returning({ id: cargo.id });
+    const [cargoProducao] = await database.db
+      .insert(cargo)
+      .values({
+        tenantId: t!.id,
+        nome: "Produção",
+        sistema: true,
+        chao: true,
+        exige2fa: false,
+        permissoes: ["os:avancar"],
+      })
+      .returning({ id: cargo.id });
+
     await database.db.insert(usuario).values({
       tenantId: t!.id,
       authUserId: AUTH_ID_ADMIN,
       nome: "Dona",
       email: "dona@x.com",
       papel: "dono",
+      cargoId: cargoDono!.id,
     });
     await database.db.insert(usuario).values({
       tenantId: t!.id,
@@ -51,6 +78,7 @@ describe("login (US-02)", () => {
       nome: "Operador",
       email: "op@x.com",
       papel: "producao",
+      cargoId: cargoProducao!.id,
     });
 
     auth = new FakeAuthSignIn();

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { AbrirOSInput } from "@/application/abrir-os";
 import type { ItemEntrada } from "@/application/orcamento";
-import { type Acao, pode } from "@/domain/auth/rbac";
+import { type Permissao, pode } from "@/domain/auth/cargo";
 import { modalidadeValida } from "@/domain/os/entrada";
 import type { EstadoOS } from "@/domain/os/estado";
 import {
@@ -42,12 +42,12 @@ import {
  * Autorização no BOUNDARY (RNF-SEC-02): resolve a sessão e CHECA o papel antes de qualquer mutação.
  * É a checagem que vale (o servidor), não só o read-only da UI. Retorna a sessão ou o motivo do erro.
  */
-async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
+async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
   const sessao = await sessaoAtual();
   if (!sessao) {
     return { erro: "Sua sessão expirou. Entre novamente." };
   }
-  if (!pode(sessao.papel, acao)) {
+  if (!pode(sessao.permissoes, acao)) {
     return { erro: "Você não tem permissão para essa ação." };
   }
   return { sessao };

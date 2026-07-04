@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { type Acao, pode } from "@/domain/auth/rbac";
+import { type Permissao, pode } from "@/domain/auth/cargo";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import {
   limparDemonstracaoNoTenant,
@@ -9,12 +9,12 @@ import {
 } from "@/infra/composition/config";
 
 /** Preencher/limpar a demonstração é configuração da oficina: só dono/gestor. */
-async function autorizar(acao: Acao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
+async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | { erro: string }> {
   const sessao = await sessaoAtual();
   if (!sessao) {
     return { erro: "Sua sessão expirou. Entre novamente." };
   }
-  if (!pode(sessao.papel, acao)) {
+  if (!pode(sessao.permissoes, acao)) {
     return { erro: "Você não tem permissão para isso." };
   }
   return { sessao };
