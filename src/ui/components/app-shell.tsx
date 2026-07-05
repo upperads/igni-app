@@ -23,6 +23,7 @@ const NAV_CONFIG = [
   { href: "/config/equipe", rotulo: "Equipe" },
   { href: "/config/estacoes", rotulo: "Estações" },
   { href: "/config/cargos", rotulo: "Cargos" },
+  { href: "/config/telas", rotulo: "Telas" },
 ] as const;
 
 // Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; o resto é de desktop.
