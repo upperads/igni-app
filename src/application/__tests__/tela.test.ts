@@ -1,8 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { listarTelas, registrarTela, resolverTelaPorToken, revogarTela } from "@/application/tela";
+import { configurarTela, listarTelas, registrarTela, resolverTelaPorToken, revogarTela } from "@/application/tela";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
 import { estacao, tela, tenant, usuario } from "@/infra/db/schema";
+import { notificarPainel } from "@/infra/realtime/notificar";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
 vi.mock("@/infra/realtime/notificar", () => ({ notificarPainel: vi.fn().mockResolvedValue(undefined) }));
@@ -74,5 +75,13 @@ describe("aplicação — tela", () => {
 
   it("token inexistente resolve null", async () => {
     expect(await resolverTelaPorToken(database, "nao-existe")).toBeNull();
+  });
+
+  it("configurarTela dispara notificarPainel com o tenant (o push pra TV)", async () => {
+    await registrarTela(database, sessaoA(), { nome: "TV", modo: "geral", estacaoId: null });
+    const [t] = await listarTelas(database, sessaoA());
+    vi.mocked(notificarPainel).mockClear();
+    await configurarTela(database, sessaoA(), t!.id, { nome: "TV", modo: "estacao", estacaoId: estacaoA });
+    expect(notificarPainel).toHaveBeenCalledWith(tenantA);
   });
 });
