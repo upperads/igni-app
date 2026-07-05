@@ -3,8 +3,8 @@
 > Frentes de EVOLUÇÃO DO PRODUTO levantadas pelo dono em 01–02/07/2026, durante a varredura de
 > qualidade. São maiores que polimento — cada uma merece planejamento próprio (`/produto` / `/prioriza`),
 > não ser espremida numa fatia de correção. Registradas aqui pra não se perderem. **Entregues até aqui:
-> P-0 (Quiosque + PIN), P-2 (Catálogo de preços) e P-1 (Cargos configuráveis). Próximo: P-3 (controle
-> remoto de TV) e P-4 (financeiro).**
+> P-0 (Quiosque + PIN), P-2 (Catálogo de preços), P-1 (Cargos configuráveis) e P-3 (Controle remoto de
+> TV). Próximo: P-4 (Módulo Financeiro).**
 
 ## P-1. ✅ NO AR (04/07/2026) — Cargos configuráveis por tenant
 **A dor (nas palavras do dono):** *"por que a equipe teria senha se eles vão ter a TV pra acompanhar?"* +
@@ -45,15 +45,27 @@ sempre em centavos inteiros; `reaisParaCentavos` é fonte única no domínio. Sp
 **Fica para fatias futuras:** histórico de preço, importar planilha, preço por cliente, contagem "N serviços
 afetados" antes de confirmar o reajuste, validação da faixa do pct no cliente (hoje só no servidor).
 
-## P-3. Controle remoto do que cada TV mostra (chão ↔ escritório)
+## P-3. ✅ NO AR (05/07/2026) — Controle remoto do que cada TV mostra
 **A dor:** *"o chão tem vários setores, cada um com a TV exibindo a operação; o admin gerencia pelo
 computador no escritório. Essa conexão remota existe?"*
 
-**Estado atual (verificado):** o **realtime JÁ existe** (ADR-010, `notificarPainel` + broadcast por tenant):
-quando o escritório muda algo, a TV do chão atualiza em <2s, e vice-versa. O `/chao` já filtra por etapa
-(`?etapa=`) e por estação (`?por=estacao`). O que **falta** é o admin **controlar remotamente qual
-setor/filtro cada TV específica mostra** (hoje cada TV é aberta manualmente na URL certa). Seria um
-"gerenciador de telas": o escritório define, a TV obedece. Feature nova (registro de telas + push de config).
+**Entregue:** cada TV vira um **dispositivo de tela** com token forte (molde do quiosque P-0), na rota
+pública **`/tv/[token]`** (sem senha, read-only). O escritório registra as TVs em **`/config/telas`**
+(gate `config:editar`, QR + código curto mostrados 1×), controla remotamente **o que cada uma mostra**
+— uma estação (`modo=estacao`) ou a visão geral (`modo=geral`) — e a TV **obedece em <2s** pelo realtime
+que já existia (`configurarTela` → `notificarPainel` → a TV relê a própria config). Pareamento por
+`/tv/entrar` (digita o código). Tabela `tela` por tenant com RLS (migrations 0025/0026), resolução por
+token **privilegiada** (o tenant vem só do registro, nunca do input — sem vazamento). **Escopo mínimo:**
+a TV só exibe o painel (código da OS + tipo do equipamento + responsável + sinal), nunca placa/chassi/
+cliente/dinheiro, nenhuma ação. A `/painel/tv` logada continua existindo. Review final (opus) verificou os
+2 riscos Critical de rota pública multi-tenant (isolamento + PII) — ambos fechados. Spec/plano:
+`docs/superpowers/specs/2026-07-04-controle-remoto-tv-design.md` + `docs/superpowers/plans/2026-07-04-*`.
+
+**Fica para fatias futuras:** filtro por etapa numa tela; título/tema custom; múltiplas estações por TV;
+rotação automática entre setores; heartbeat/uptime das TVs. **Segurança (follow-up conjunto):** endurecer
+o "código curto na URL" em `/quiosque` E `/tv` juntos (código vira credencial de pareamento com TTL,
+trocada server-side pelo token pleno) — hoje é o mesmo trade-off do quiosque auditado, mitigado por
+rate-limit por IP + só resolver tela ativa.
 
 ## P-0. ✅ NO AR (03/07/2026) — Quiosque de Setor + PIN
 **Entregue:** o tablet do box fica logado NO SETOR por um **token forte** (sha256, gerado pelo admin nas
@@ -108,8 +120,8 @@ Grande; provavelmente depois de P-1 (papéis) e P-2 (preços), que são pré-req
 - ✅ **P-0 (quiosque + PIN)** — NO AR (03/07).
 - ✅ **P-2 (catálogo de preços)** — NO AR (03/07).
 - ✅ **P-1 (cargos configuráveis)** — NO AR (04/07). Base pronta: define quem vê/faz o quê; destrava P-4.
-1. **P-3 (controle remoto de TV)** — melhora a operação de chão; o realtime já dá a fundação. **← próximo**
-2. **P-4 (financeiro)** — maior; os cargos (P-1) e os preços (P-2) já são a fundação.
+- ✅ **P-3 (controle remoto de TV)** — NO AR (05/07). Fecha a operação de chão remota.
+1. **P-4 (Módulo Financeiro)** — maior; os cargos (P-1, cargo Financeiro pronto) e os preços (P-2) já são a fundação. **← próximo**
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
