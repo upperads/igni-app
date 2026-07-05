@@ -77,11 +77,17 @@ export async function atualizarSessaoEProteger(request: NextRequest): Promise<Ne
     return redirecionar(request, response, "/login");
   }
 
-  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const emAal2 = aal?.currentLevel === "aal2";
-  const fatorVerificadoPendente = aal?.currentLevel === "aal1" && aal?.nextLevel === "aal2";
+  // Perf: só bate na rede pelo AAL quem PODE precisar de 2FA. Papéis não-admin (sem `requires_mfa`)
+  // nunca fazem step-up nem enrollment — pular o round-trip do `getAuthenticatorAssuranceLevel()` corta
+  // uma chamada de rede em toda navegação da maioria dos usuários (recepção/produção). Quem exige MFA
+  // (admin) ainda paga a checagem, que é onde ela importa.
   const exigeMfa = user.app_metadata?.requires_mfa === true;
-  const precisa2fa = !emAal2 && (fatorVerificadoPendente || exigeMfa);
+  let precisa2fa = false;
+  if (exigeMfa) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const emAal2 = aal?.currentLevel === "aal2";
+    precisa2fa = !emAal2;
+  }
 
   if (precisa2fa) {
     return eh2fa ? response : redirecionar(request, response, "/login/2fa");

@@ -9,7 +9,7 @@ import { ToggleTema } from "./toggle-tema";
 const NAV = [
   { href: "/", rotulo: "Painel" },
   { href: "/chao", rotulo: "Chão" },
-  { href: "/triagem", rotulo: "Triagem" },
+  // "Triagem" foi fundida em /os (aba "Por impacto"). Uma entrada só para as ordens de serviço.
   { href: "/os", rotulo: "OS" },
   { href: "/servicos", rotulo: "Serviços" },
   { href: "/clientes", rotulo: "Clientes" },
@@ -27,9 +27,7 @@ const NAV_CONFIG = [
 ] as const;
 
 // Na barra inferior (mobile, zona do polegar): as telas de chão. Chão primeiro; o resto é de desktop.
-const NAV_MOBILE = NAV.filter((n) =>
-  ["/", "/chao", "/triagem", "/os"].includes(n.href),
-);
+const NAV_MOBILE = NAV.filter((n) => ["/", "/chao", "/os"].includes(n.href));
 
 /** Iniciais da oficina para o avatar (ex.: "Retífica Central" → "RC"). Máx. 2 letras. */
 function iniciais(nome: string): string {

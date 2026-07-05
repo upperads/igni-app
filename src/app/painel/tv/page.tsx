@@ -68,20 +68,26 @@ export default async function PainelTvPage() {
         </div>
       ) : null}
 
-      <main className="flex-1 px-6 py-6">
+      <main className="min-h-0 flex-1 px-6 py-6">
         {etapas.length === 0 ? (
           <div className="grid h-full place-items-center">
             <p className="font-display text-2xl text-aco-300">Nenhum serviço na oficina agora.</p>
           </div>
         ) : (
-          <div className="flex flex-col gap-8">
+          // KANBAN: uma COLUNA por etapa (esquerda→direita = fluxo da produção), cards empilhados.
+          // Scroll horizontal se não couber na largura da TV.
+          <div className="flex h-full gap-4 overflow-x-auto pb-2">
             {etapas.map((etapa) => (
-              <section key={etapa.estado} aria-label={`Etapa ${etapa.rotulo}`}>
-                <div className="mb-3 flex items-center gap-3">
-                  <h2 className="font-display text-2xl text-aco-100">{etapa.rotulo}</h2>
-                  <span className="font-mono text-sm text-aco-400">{etapa.cards.length}</span>
+              <section
+                key={etapa.estado}
+                aria-label={`Etapa ${etapa.rotulo}`}
+                className="flex w-80 shrink-0 flex-col rounded-lg border border-grafite-700 bg-grafite-850/50"
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-grafite-700 px-3 py-2">
+                  <h2 className="font-display text-xl text-aco-100">{etapa.rotulo}</h2>
+                  <span className="font-mono text-sm tabular-nums text-aco-400">{etapa.cards.length}</span>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
                   {etapa.cards.map((card) => (
                     <OsCard
                       key={card.id}

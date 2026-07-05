@@ -24,7 +24,6 @@ async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | {
 function revalidarTudo(): void {
   revalidatePath("/");
   revalidatePath("/os");
-  revalidatePath("/triagem");
   revalidatePath("/chao");
   revalidatePath("/relatorio");
 }

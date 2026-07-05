@@ -22,7 +22,16 @@ export interface Database {
 }
 
 export function createDatabase(connectionString: string): Database {
-  const client = postgres(connectionString);
+  // Tuning do pool (perf da navegação): a produção usa o SESSION pooler do Supabase (porta 5432), onde
+  // prepared statements funcionam — então NÃO desligamos `prepare` (desligar degradaria). `idle_timeout`
+  // devolve conexões ociosas (evita segurar slots do pooler); `connect_timeout` falha rápido em vez de
+  // pendurar o request. `max` limita o pool desta instância. Se um dia migrar para o TRANSACTION pooler
+  // (porta 6543), aí sim é obrigatório `prepare: false`.
+  const client = postgres(connectionString, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
   const db = drizzle(client, { schema });
 
   async function withTenant<T>(
