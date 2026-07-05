@@ -19,3 +19,4 @@ export * from "./tenant-contador-os";
 export * from "./quiosque-setor";
 export * from "./servico";
 export * from "./cargo";
+export * from "./tela";

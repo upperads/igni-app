@@ -176,6 +176,20 @@
       "when": 1783184080230,
       "tag": "0024_seed_cargo",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783214586281,
+      "tag": "0025_goofy_lord_tyger",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783214586282,
+      "tag": "0026_rls_tela",
+      "breakpoints": true
     }
   ]
 }
