@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   doublePrecision,
+  index,
   integer,
   pgTable,
   text,
@@ -55,5 +56,9 @@ export const os = pgTable(
     entrouNoEstadoEm: timestamp("entrou_no_estado_em", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [unique("os_numero_tenant").on(t.tenantId, t.numero)],
+  (t) => [
+    unique("os_numero_tenant").on(t.tenantId, t.numero),
+    // Perf: painel/triagem lêem as OS ativas do tenant (`estado != 'entregue'`) a cada navegação.
+    index("os_tenant_estado_idx").on(t.tenantId, t.estado),
+  ],
 );
