@@ -53,10 +53,9 @@ async function autorizar(acao: Permissao): Promise<{ sessao: SessaoUsuario } | {
   return { sessao };
 }
 
-/** Revalida as telas que mostram prioridade/travamento de uma OS. */
+/** Revalida as telas que mostram prioridade/travamento de uma OS (a triagem agora é /os?modo=impacto). */
 function revalidarOs(osId: string): void {
   revalidatePath(`/os/${osId}`);
-  revalidatePath("/triagem");
   revalidatePath("/os");
 }
 
