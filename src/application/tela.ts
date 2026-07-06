@@ -5,7 +5,7 @@ import { ALFABETO_CODIGO, gerarCodigoCurto } from "@/domain/os/quiosque";
 import { type ModoTela, validarTela } from "@/domain/os/tela";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { estacao, tela } from "@/infra/db/schema";
+import { estacao, setor, tela } from "@/infra/db/schema";
 import { notificarPainel } from "@/infra/realtime/notificar";
 import type { SessaoTenant } from "./abrir-os";
 
@@ -21,6 +21,8 @@ export interface TelaView {
   modo: ModoTela;
   estacaoId: string | null;
   estacaoNome: string | null;
+  setorId: string | null;
+  setorNome: string | null;
   codigoCurto: string;
   ativo: boolean;
   ultimoUsoEm: Date | null;
@@ -30,9 +32,10 @@ export interface TelaInput {
   nome: string;
   modo: ModoTela;
   estacaoId: string | null;
+  setorId: string | null;
 }
 
-/** Lista as telas do tenant (com nome da estação e se está ativa) — pra tela de gestão. */
+/** Lista as telas do tenant (com nome da estação/setor e se está ativa) — pra tela de gestão. */
 export function listarTelas(database: Database, sessao: SessaoTenant): Promise<TelaView[]> {
   return database.withTenant(sessao.tenantId, async (tx) => {
     const linhas = await tx
@@ -42,12 +45,15 @@ export function listarTelas(database: Database, sessao: SessaoTenant): Promise<T
         modo: tela.modo,
         estacaoId: tela.estacaoId,
         estacaoNome: estacao.nome,
+        setorId: tela.setorId,
+        setorNome: setor.nome,
         codigoCurto: tela.codigoCurto,
         revogadoEm: tela.revogadoEm,
         ultimoUsoEm: tela.ultimoUsoEm,
       })
       .from(tela)
       .leftJoin(estacao, eq(estacao.id, tela.estacaoId))
+      .leftJoin(setor, eq(setor.id, tela.setorId))
       .orderBy(asc(tela.nome));
     return linhas.map((l) => ({
       id: l.id,
@@ -55,6 +61,8 @@ export function listarTelas(database: Database, sessao: SessaoTenant): Promise<T
       modo: l.modo,
       estacaoId: l.estacaoId,
       estacaoNome: l.estacaoNome,
+      setorId: l.setorId,
+      setorNome: l.setorNome,
       codigoCurto: l.codigoCurto,
       ativo: l.revogadoEm === null,
       ultimoUsoEm: l.ultimoUsoEm,
@@ -82,6 +90,7 @@ export async function registrarTela(
           nome: input.nome.trim(),
           modo: input.modo,
           estacaoId: input.estacaoId,
+          setorId: input.setorId,
           tokenHash: hashToken(token),
           codigoCurto,
           criadoPor: sessao.usuarioId,
@@ -106,7 +115,7 @@ export async function configurarTela(
   await database.withTenant(sessao.tenantId, async (tx) => {
     await tx
       .update(tela)
-      .set({ nome: input.nome.trim(), modo: input.modo, estacaoId: input.estacaoId })
+      .set({ nome: input.nome.trim(), modo: input.modo, estacaoId: input.estacaoId, setorId: input.setorId })
       .where(eq(tela.id, id));
   });
   await notificarPainel(sessao.tenantId);
@@ -124,11 +133,12 @@ export interface TelaResolvida {
   telaId: string;
   modo: ModoTela;
   estacaoId: string | null;
+  setorId: string | null;
 }
 
 /**
  * Etapa PRIVILEGIADA mínima (espelha resolverQuiosque): resolve a tela por TOKEN (`token_hash`) OU
- * código curto. O tenant/modo/estação vêm do REGISTRO, nunca do input. Null se revogada/inexistente.
+ * código curto. O tenant/modo/estação/setor vêm do REGISTRO, nunca do input. Null se revogada/inexistente.
  * Carimba `ultimo_uso_em` (best-effort). Usa `database.db` (fora do withTenant — o lookup atravessa
  * tenants por token; a leitura do painel depois abre withTenant no tenant resolvido).
  */
@@ -145,6 +155,7 @@ export async function resolverTelaPorToken(
       tenantId: tela.tenantId,
       modo: tela.modo,
       estacaoId: tela.estacaoId,
+      setorId: tela.setorId,
       revogadoEm: tela.revogadoEm,
     })
     .from(tela)
@@ -159,6 +170,7 @@ export async function resolverTelaPorToken(
           tenantId: tela.tenantId,
           modo: tela.modo,
           estacaoId: tela.estacaoId,
+          setorId: tela.setorId,
           revogadoEm: tela.revogadoEm,
         })
         .from(tela)
@@ -170,5 +182,11 @@ export async function resolverTelaPorToken(
     return null;
   }
   await database.db.update(tela).set({ ultimoUsoEm: new Date() }).where(eq(tela.id, linha.id));
-  return { tenantId: linha.tenantId, telaId: linha.id, modo: linha.modo, estacaoId: linha.estacaoId };
+  return {
+    tenantId: linha.tenantId,
+    telaId: linha.id,
+    modo: linha.modo,
+    estacaoId: linha.estacaoId,
+    setorId: linha.setorId,
+  };
 }
