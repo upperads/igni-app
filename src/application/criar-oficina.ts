@@ -1,10 +1,10 @@
 import type { AuthIdentityPort } from "@/application/ports/auth-identity";
 import { CARGO_DONO, CARGOS_SEMENTE } from "@/domain/auth/cargo";
 import { DadosInvalidosError, EmailJaCadastradoError } from "@/domain/shared/errors";
-import { estacoesDoRamo, type Ramo } from "@/domain/templates/ramo";
+import { setoresDoRamo, type Ramo } from "@/domain/templates/ramo";
 import type { AppDatabase } from "@/infra/db/connection";
 import { isUniqueViolation } from "@/infra/db/errors";
-import { cargo, estacao, tenant, usuario } from "@/infra/db/schema";
+import { cargo, estacao, setor, tenant, usuario } from "@/infra/db/schema";
 
 /** Tamanho mínimo de senha aceito pelo onboarding (alinhado ao Supabase Auth local). */
 export const SENHA_MIN_LENGTH = 8;
@@ -57,7 +57,7 @@ export async function criarOficina(
     throw new DadosInvalidosError(`Senha deve ter ao menos ${SENHA_MIN_LENGTH} caracteres.`);
   }
 
-  const estacoes = estacoesDoRamo(input.ramo);
+  const setores = setoresDoRamo(input.ramo);
 
   // 1) Cria a identidade (lança EmailJaCadastradoError se o e-mail já existe no provedor). O admin
   //    nasce `dono` (papel administrativo): marca `requires_mfa` no app_metadata (entra no JWT)
@@ -108,17 +108,29 @@ export async function criarOficina(
         })
         .returning({ id: usuario.id });
 
-      if (estacoes.length > 0) {
-        await tx.insert(estacao).values(
-          estacoes.map((e) => ({ tenantId: oficina!.id, nome: e.nome, ordem: e.ordem })),
-        );
+      // Semeia os setores do template e, dentro de cada um, suas estações (P-5a). `ordem` da estação
+      // segue a ordem do setor (fluxo geral); o dono reordena depois na tela.
+      let ordemEstacao = 0;
+      for (const s of setores) {
+        const [setorCriado] = await tx
+          .insert(setor)
+          .values({ tenantId: oficina!.id, nome: s.nome, ordem: s.ordem })
+          .returning({ id: setor.id });
+        if (s.estacoes.length > 0) {
+          await tx.insert(estacao).values(
+            s.estacoes.map((nome) => {
+              ordemEstacao += 1;
+              return { tenantId: oficina!.id, nome, ordem: ordemEstacao, setorId: setorCriado!.id };
+            }),
+          );
+        }
       }
 
       return {
         tenantId: oficina!.id,
         adminId: admin!.id,
         authUserId,
-        estacoesCriadas: estacoes.length,
+        estacoesCriadas: setores.reduce((n, s) => n + s.estacoes.length, 0),
       };
     });
   } catch (err) {

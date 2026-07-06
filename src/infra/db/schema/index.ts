@@ -20,3 +20,4 @@ export * from "./quiosque-setor";
 export * from "./servico";
 export * from "./cargo";
 export * from "./tela";
+export * from "./setor";
