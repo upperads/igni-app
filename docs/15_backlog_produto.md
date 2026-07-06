@@ -116,12 +116,61 @@ Grande; provavelmente depois de P-1 (papéis) e P-2 (preços), que são pré-req
 
 ---
 
+## Descobertas de campo — reunião de teste na oficina (05-06/07/2026)
+> O dono e a equipe abriram OS de verdade no Igni e narraram o que faltava. Confirmaram: **triagem×OS
+> era redundante** (já fundido), **navegação lenta** (já corrigida) e **modo TV = visão de corredor** (P-3).
+> Itens novos abaixo, por tipo. Ordem de ataque definida com o dono: **F (bug) e A (setores) primeiro.**
+
+### P-5. ⭐ Modelo de SETOR agrupando estações (o mais estrutural) [item A]
+**A dor (nas palavras do dono):** a oficina real **não tem uma TV por estação**. Tem **~4-5 SETORES
+físicos**, cada um agrupando várias estações: **Usinagem** (bloco + cabeçote + biela + virabrequim +
+tornearia, tudo num box só), **Bomba e bico**, **Desmontagem + lavagem** (desmonta e já lava), **Montagem**,
+**Oficina/pátio**. Hoje `estacao` é fina demais (uma por peça) e a TV/quiosque é por estação.
+**A oportunidade:** um nível **SETOR** que agrupa estações; a TV mostra o setor inteiro (todas as suas
+estações numa tela só); o quiosque/bump é por setor. Toca `estacao` (P-1 config), `tela` (P-3) e `quiosque`.
+Decisão de arquitetura — próximo a implementar. **Precisa de brainstorm próprio.**
+
+### Refinos de coisas no ar
+- **[C] Catálogo no orçamento com Enter inteligente** (refina P-2): digitar "mão de obra de plainar" + Enter
+  abre tudo de plainar; digita a peça → entende que é peça. Sem selecionar tipo à mão. Navegação por Enter/Tab.
+- **[D] Quantidade no item do orçamento** (refina P-2): "retífica de biela = R$110, **4 unidades**". Hoje só
+  há valor, não quantidade. O markup por % confundiu ("não por porcentagem") — repensar a UI de valor×qtd×markup.
+- **[H] Card do modo TV com FUNDO colorido por prioridade** (refina P-3): o card inteiro com o tom (verde/
+  amarelo/vermelho), estilo painel de senha/UPA, pra bater o olho de longe. Hoje é só a faixa lateral.
+- **[I] Setor responsável no card da TV** (refina P-3): na execução, o card mostra **qual setor está com a
+  bola** ("setor de usinagem") pra a pessoa do setor saber que é dela.
+
+### Bug a investigar
+- **[F] Card preso em "aguardando aprovação" depois de aprovar o orçamento.** Na reunião, aprovaram o
+  orçamento mas o card continuou parecendo travado/aguardando decisão do cliente. Investigar o fluxo
+  aprovação→execução (pode ser bug real, ou UX de "o que fazer a seguir" não óbvia).
+
+### Features novas
+- **[B] Fluxo de cadastro guiado ao abrir OS**: em etapas (cliente → veículo → serviço → orçamento),
+  passando de campo em campo com Enter/Tab, em vez de clicar botão por botão. O cliente **fica na base** ao
+  abrir a OS (não cadastra separado). "Eu travei nisso" — a organização do fluxo é a dor central do dono.
+- **[E] Placa → puxa dados do veículo (API tipo Denatran)**: digita a placa, traz ano/modelo/cor. "API e é
+  baratinho." Integração externa — avaliar custo/parceiro.
+- **[G] Editar orçamento depois de aprovado**: hoje só há "desfazer" (que desfaz o último item, gerou
+  dúvida). Falta um **"editar orçamento"** sem apagar tudo. Liga com o P-4a (conta a receber acompanha).
+- **[J] Aviso visual "salvo"**: pop-up/toast de confirmação a cada salvamento.
+
+### Confirmações (sem ação)
+- **[K] Nota fiscal via API "quando ficar caro, paga por ano"** — o dono confirma: fiscal é **Onda 3/futuro**,
+  fora do P-4. Reforça a fronteira que já desenhamos no financeiro.
+
+---
+
 ## Ordem sugerida (a validar com /prioriza)
 - ✅ **P-0 (quiosque + PIN)** — NO AR (03/07).
 - ✅ **P-2 (catálogo de preços)** — NO AR (03/07).
 - ✅ **P-1 (cargos configuráveis)** — NO AR (04/07). Base pronta: define quem vê/faz o quê; destrava P-4.
 - ✅ **P-3 (controle remoto de TV)** — NO AR (05/07). Fecha a operação de chão remota.
-1. **P-4 (Módulo Financeiro)** — maior; os cargos (P-1, cargo Financeiro pronto) e os preços (P-2) já são a fundação. **← próximo**
+- ✅ **Aprimoramentos (perf navegação + Kanban TV + funde triagem/os)** — NO AR (05/07).
+1. **[F] Bug do card "aguardando aprovação"** — investigar primeiro (rápido; fluxo crítico). **← agora**
+2. **P-5 (setor agrupando estações)** [item A] — estrutural; destrava os refinos de TV. **← em seguida**
+3. **P-4 (Módulo Financeiro)** — pausado com decisões travadas (conta a receber: gatilho=orçamento aprovado; tabela `conta_receber` separada; aberta acompanha/recebida congela). Retomar depois.
+4. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono quando P-5/P-4 andarem.
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
