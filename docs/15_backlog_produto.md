@@ -121,14 +121,20 @@ Grande; provavelmente depois de P-1 (papéis) e P-2 (preços), que são pré-req
 > era redundante** (já fundido), **navegação lenta** (já corrigida) e **modo TV = visão de corredor** (P-3).
 > Itens novos abaixo, por tipo. Ordem de ataque definida com o dono: **F (bug) e A (setores) primeiro.**
 
-### P-5. ⭐ Modelo de SETOR agrupando estações (o mais estrutural) [item A]
+### P-5. Modelo de SETOR agrupando estações [item A] — decomposto em P-5a/b/c
 **A dor (nas palavras do dono):** a oficina real **não tem uma TV por estação**. Tem **~4-5 SETORES
-físicos**, cada um agrupando várias estações: **Usinagem** (bloco + cabeçote + biela + virabrequim +
-tornearia, tudo num box só), **Bomba e bico**, **Desmontagem + lavagem** (desmonta e já lava), **Montagem**,
-**Oficina/pátio**. Hoje `estacao` é fina demais (uma por peça) e a TV/quiosque é por estação.
-**A oportunidade:** um nível **SETOR** que agrupa estações; a TV mostra o setor inteiro (todas as suas
-estações numa tela só); o quiosque/bump é por setor. Toca `estacao` (P-1 config), `tela` (P-3) e `quiosque`.
-Decisão de arquitetura — próximo a implementar. **Precisa de brainstorm próprio.**
+físicos**, cada um agrupando várias estações (Usinagem, Bomba e bico, Desmontagem+lavagem, Montagem, Pátio).
+
+- **P-5a ✅ NO AR (06/07/2026)** — nível **setor** agrupando `estacao` (dois níveis). Migração sem quebrar
+  (1 setor por estação existente + liga; verificado no cloud: **0 estações órfãs**, 30/30 ligadas). Template
+  do ramo vira setores→estações; `criar-oficina` semeia. Tela **`/config/setores`** (grupos + estações
+  aninhadas + mover estação; apagar setor bloqueia se tem estações). A **TV mostra um setor inteiro**
+  (`modo=setor` filtra pelas estações do setor). `os.estacaoId` intocado (setor derivado). Isolamento RLS
+  testado A↔B (migrations 0028–0031). Spec/plano: `docs/superpowers/*2026-07-06-setor-*`.
+- **P-5b (futura)** — quiosque por setor (o tablet do chão loga no setor, não na estação).
+- **P-5c (futura)** — card do painel/TV com o **setor responsável** na execução (item I da reunião).
+- Follow-up cosmético: título da TV em `modo=setor` mostra "Setor" genérico (o nome do setor não chega ao
+  `DadosTv`) — fatia curta futura.
 
 ### Refinos de coisas no ar
 - **[C] Catálogo no orçamento com Enter inteligente** (refina P-2): digitar "mão de obra de plainar" + Enter
@@ -167,10 +173,11 @@ Decisão de arquitetura — próximo a implementar. **Precisa de brainstorm pró
 - ✅ **P-1 (cargos configuráveis)** — NO AR (04/07). Base pronta: define quem vê/faz o quê; destrava P-4.
 - ✅ **P-3 (controle remoto de TV)** — NO AR (05/07). Fecha a operação de chão remota.
 - ✅ **Aprimoramentos (perf navegação + Kanban TV + funde triagem/os)** — NO AR (05/07).
-1. **[F] Bug do card "aguardando aprovação"** — investigar primeiro (rápido; fluxo crítico). **← agora**
-2. **P-5 (setor agrupando estações)** [item A] — estrutural; destrava os refinos de TV. **← em seguida**
-3. **P-4 (Módulo Financeiro)** — pausado com decisões travadas (conta a receber: gatilho=orçamento aprovado; tabela `conta_receber` separada; aberta acompanha/recebida congela). Retomar depois.
-4. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono quando P-5/P-4 andarem.
+- ✅ **[F] Bug do card "aguardando aprovação"** — corrigido e NO AR (05/07).
+- ✅ **P-5a (setor agrupando estações + TV por setor)** — NO AR (06/07).
+1. **P-4 (Módulo Financeiro)** — pausado com decisões travadas (P-4a conta a receber: gatilho=orçamento aprovado; tabela `conta_receber` separada; aberta acompanha/recebida congela). **← próximo**
+2. **P-5b/P-5c** — quiosque por setor; card com setor responsável (item I).
+3. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono quando P-4 andar.
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
