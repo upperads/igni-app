@@ -9,11 +9,11 @@ import {
 import { DadosInvalidosError } from "@/domain/shared/errors";
 
 describe("cargo — catálogo e pode()", () => {
-  it("o catálogo tem exatamente as 10 chaves esperadas", () => {
+  it("o catálogo tem exatamente as 11 chaves esperadas", () => {
     expect([...PERMISSOES].sort()).toEqual(
       [
         "cadastro:editar", "config:editar", "dinheiro:ver", "dinheiro:ver_peca",
-        "equipe:gerir", "orcamento:editar", "os:abrir", "os:avancar", "os:editar",
+        "equipe:gerir", "financeiro:gerir", "orcamento:editar", "os:abrir", "os:avancar", "os:editar",
         "triagem:override",
       ].sort(),
     );
@@ -30,6 +30,7 @@ describe("cargo — validarCargo (pisos 2 e catálogo)", () => {
     expect(() => validarCargo({ nome: "Chão X", chao: true, permissoes: ["dinheiro:ver"] })).toThrow(DadosInvalidosError);
     expect(() => validarCargo({ nome: "Chão X", chao: true, permissoes: ["dinheiro:ver_peca"] })).toThrow(DadosInvalidosError);
     expect(() => validarCargo({ nome: "Chão X", chao: true, permissoes: ["orcamento:editar"] })).toThrow(DadosInvalidosError);
+    expect(() => validarCargo({ nome: "Chão X", chao: true, permissoes: ["financeiro:gerir"] })).toThrow(DadosInvalidosError);
     expect(() => validarCargo({ nome: "Chão X", chao: true, permissoes: ["os:avancar"] })).not.toThrow();
   });
 
