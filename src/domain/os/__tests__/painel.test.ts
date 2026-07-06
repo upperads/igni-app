@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  calcularBola,
   calcularKpis,
   culpaDoAtraso,
   type EventoGestao,
@@ -10,6 +11,41 @@ import {
   resumoCulpa,
   sinalDaOs,
 } from "@/domain/os/painel";
+
+describe("painel — de quem é a bola (responsabilização)", () => {
+  const base = {
+    travado: false,
+    travamentoResponsabilidade: null,
+    travamentoMotivo: null,
+    orcamentoAprovado: false,
+  };
+
+  it("aguardando_aprovacao SEM aprovação → bola do cliente (esperando ele aprovar)", () => {
+    const r = calcularBola({ ...base, estado: "aguardando_aprovacao" });
+    expect(r.bola).toBe("cliente");
+  });
+
+  it("BUG [F]: aguardando_aprovacao COM orçamento aprovado → bola da OFICINA (não 'esperando o cliente')", () => {
+    // O cliente já aprovou; a OS ainda está em aguardando_aprovacao porque mover é o 2º passo.
+    // Antes da correção, isto retornava 'cliente' com 'esperando o cliente aprovar' — factualmente errado.
+    const r = calcularBola({ ...base, estado: "aguardando_aprovacao", orcamentoAprovado: true });
+    expect(r.bola).toBe("oficina");
+    expect(r.detalhe.toLowerCase()).not.toContain("esperando o cliente");
+  });
+
+  it("travado por cliente → bola do cliente", () => {
+    const r = calcularBola({ ...base, estado: "execucao", travado: true, travamentoResponsabilidade: "cliente" });
+    expect(r.bola).toBe("cliente");
+  });
+
+  it("aguardando_peca → bola da peça", () => {
+    expect(calcularBola({ ...base, estado: "aguardando_peca" }).bola).toBe("peca");
+  });
+
+  it("em execução normal → bola da oficina", () => {
+    expect(calcularBola({ ...base, estado: "execucao" }).bola).toBe("oficina");
+  });
+});
 
 describe("painel — sinal da OS (precedência)", () => {
   it("travado vence tudo → aguardando", () => {

@@ -1,4 +1,4 @@
-import type { EstadoOS } from "./estado";
+import { type EstadoOS, quatroPerguntas } from "./estado";
 import type { Prioridade, Responsabilidade } from "./triagem";
 
 /**
@@ -49,6 +49,43 @@ export function culpaDoAtraso(args: {
     return "peca";
   }
   return "nossa";
+}
+
+/** De quem é a bola, na visão interna (o pilar): oficina / cliente / peça. */
+export type Bola = "oficina" | "cliente" | "peca";
+
+/**
+ * "De quem é a bola" a partir do estado + contexto. Lógica pura (era da page do detalhe).
+ *
+ * PONTO CHAVE (bug de campo, reunião 05/07): em `aguardando_aprovacao`, a bola só é do CLIENTE
+ * enquanto o orçamento AINDA NÃO foi aprovado. Depois que o cliente aprova, a OS ainda fica em
+ * `aguardando_aprovacao` (mover para peça/execução é o 2º passo, da operação) — mas a bola já é da
+ * OFICINA, e o texto orienta o próximo passo. Sem isto, o card dizia "esperando o cliente aprovar"
+ * mesmo com o orçamento já aprovado.
+ */
+export function calcularBola(args: {
+  estado: EstadoOS;
+  orcamentoAprovado: boolean;
+  travado: boolean;
+  travamentoResponsabilidade: Responsabilidade | null;
+  travamentoMotivo: string | null;
+}): { bola: Bola; detalhe: string } {
+  if (args.estado === "aguardando_aprovacao" && !args.orcamentoAprovado) {
+    return { bola: "cliente", detalhe: "Esperando o cliente aprovar o orçamento enviado." };
+  }
+  if (args.estado === "aguardando_aprovacao" && args.orcamentoAprovado) {
+    return { bola: "oficina", detalhe: "Orçamento aprovado — mova a OS para peça ou execução." };
+  }
+  if (args.travado && args.travamentoResponsabilidade === "cliente") {
+    return { bola: "cliente", detalhe: args.travamentoMotivo ?? "Travado por uma pendência do cliente." };
+  }
+  if (args.estado === "aguardando_peca") {
+    return { bola: "peca", detalhe: "Aguardando a peça chegar para seguir." };
+  }
+  if (args.travado) {
+    return { bola: "oficina", detalhe: args.travamentoMotivo ?? "Travado, e a resolução é nossa." };
+  }
+  return { bola: "oficina", detalhe: `${quatroPerguntas(args.estado).oQueFalta}.` };
 }
 
 export interface ItemKpi {

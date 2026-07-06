@@ -2,17 +2,17 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { pode } from "@/domain/auth/rbac";
 import { proximosEstados, quatroPerguntas, rotuloEstado } from "@/domain/os/estado";
-import { sinalDaOs } from "@/domain/os/painel";
+import { calcularBola, sinalDaOs } from "@/domain/os/painel";
 import { diasRestantesAte } from "@/domain/os/triagem";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarEstacoesNoTenant } from "@/infra/composition/config";
-import { type DetalheOs, detalheOs, orcamentoDaOs } from "@/infra/composition/os";
+import { detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { listarServicosNoTenant } from "@/infra/composition/servico";
 import { AppShell } from "@/ui/components/app-shell";
 import { dataHora } from "@/ui/format";
 import { MedidorEstado } from "@/ui/components/medidor-estado";
 import { PrioridadeBadge } from "@/ui/components/prioridade-badge";
-import { type Bola, Responsabilizacao } from "@/ui/components/responsabilizacao";
+import { Responsabilizacao } from "@/ui/components/responsabilizacao";
 import { AcoesOs } from "./acoes";
 import { AvisarWhatsapp } from "./avisar-whatsapp";
 import { EstacaoFisica } from "./estacao-fisica";
@@ -30,23 +30,6 @@ function prazoLabel(dias: number | null): string {
   if (dias < 0) return `atrasado ${-dias}d`;
   if (dias === 0) return "vence hoje";
   return `faltam ${dias}d`;
-}
-
-/** De quem é a bola, na visão interna (o pilar). */
-function calcularBola(os: DetalheOs): { bola: Bola; detalhe: string } {
-  if (os.estado === "aguardando_aprovacao") {
-    return { bola: "cliente", detalhe: "Esperando o cliente aprovar o orçamento enviado." };
-  }
-  if (os.travado && os.travamentoResponsabilidade === "cliente") {
-    return { bola: "cliente", detalhe: os.travamentoMotivo ?? "Travado por uma pendência do cliente." };
-  }
-  if (os.estado === "aguardando_peca") {
-    return { bola: "peca", detalhe: "Aguardando a peça chegar para seguir." };
-  }
-  if (os.travado) {
-    return { bola: "oficina", detalhe: os.travamentoMotivo ?? "Travado, e a resolução é nossa." };
-  }
-  return { bola: "oficina", detalhe: `${quatroPerguntas(os.estado).oQueFalta}.` };
 }
 
 export default async function DetalheOsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -72,7 +55,13 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
   const perguntas = quatroPerguntas(os.estado);
   const diasRestantes = diasRestantesAte(os.prazoPrometido, new Date());
   const sinal = sinalDaOs({ prioridade: os.prioridade, travado: os.travado, diasRestantes });
-  const { bola, detalhe } = calcularBola(os);
+  const { bola, detalhe } = calcularBola({
+    estado: os.estado,
+    orcamentoAprovado: orcamento?.status === "aprovado",
+    travado: os.travado,
+    travamentoResponsabilidade: os.travamentoResponsabilidade,
+    travamentoMotivo: os.travamentoMotivo,
+  });
 
   const legenda: Array<{ k: string; v: string }> = [
     { k: "Onde está", v: perguntas.onde },
