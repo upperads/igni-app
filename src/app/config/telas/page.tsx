@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { pode } from "@/domain/auth/rbac";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarEstacoesNoTenant } from "@/infra/composition/config";
+import { listarSetoresNoTenant } from "@/infra/composition/setor";
 import { listarTelasNoTenant } from "@/infra/composition/tela";
 import { AppShell } from "@/ui/components/app-shell";
 import { CabecalhoTela } from "@/ui/components/cabecalho-tela";
@@ -22,9 +23,10 @@ export default async function TelasPage() {
     redirect("/");
   }
 
-  const [telas, estacoes] = await Promise.all([
+  const [telas, estacoes, setores] = await Promise.all([
     listarTelasNoTenant(sessao),
     listarEstacoesNoTenant(sessao),
+    listarSetoresNoTenant(sessao),
   ]);
 
   return (
@@ -35,7 +37,11 @@ export default async function TelasPage() {
         sub="Cadastre as TVs dos setores e troque daqui o que cada uma mostra. A TV obedece na hora — sem ninguém ir até ela."
       />
       <div className="max-w-2xl">
-        <PainelTelas telas={telas} estacoes={estacoes.map((e) => ({ id: e.id, nome: e.nome }))} />
+        <PainelTelas
+          telas={telas}
+          estacoes={estacoes.map((e) => ({ id: e.id, nome: e.nome }))}
+          setores={setores.map((s) => ({ id: s.id, nome: s.nome }))}
+        />
       </div>
     </AppShell>
   );

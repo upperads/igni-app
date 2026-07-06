@@ -38,11 +38,16 @@ export interface ResultadoRegistrar extends ResultadoAcao {
 function lerModo(
   modo: string,
   estacaoId: string | null,
-): { modo: ModoTela; estacaoId: string | null } | { erro: string } {
-  if (modo !== "estacao" && modo !== "geral") {
+  setorId: string | null,
+): { modo: ModoTela; estacaoId: string | null; setorId: string | null } | { erro: string } {
+  if (modo !== "estacao" && modo !== "geral" && modo !== "setor") {
     return { erro: "Modo inválido." };
   }
-  return { modo, estacaoId: modo === "estacao" ? estacaoId : null };
+  return {
+    modo,
+    estacaoId: modo === "estacao" ? estacaoId : null,
+    setorId: modo === "setor" ? setorId : null,
+  };
 }
 
 /** Registra uma TV nova: gera token forte + código curto, e devolve o QR pronto (dataURL). */
@@ -50,12 +55,13 @@ export async function acaoRegistrarTela(
   nome: string,
   modo: string,
   estacaoId: string | null,
+  setorId: string | null,
 ): Promise<ResultadoRegistrar> {
   const auth = await autorizar("config:editar");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
-  const m = lerModo(modo, estacaoId);
+  const m = lerModo(modo, estacaoId, setorId);
   if ("erro" in m) {
     return { ok: false, motivo: m.erro };
   }
@@ -64,6 +70,7 @@ export async function acaoRegistrarTela(
       nome,
       modo: m.modo,
       estacaoId: m.estacaoId,
+      setorId: m.setorId,
     });
     const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://igni-app-production.up.railway.app";
     const url = `${base}/tv/${token}`;
@@ -87,17 +94,23 @@ export async function acaoConfigurarTela(
   nome: string,
   modo: string,
   estacaoId: string | null,
+  setorId: string | null,
 ): Promise<ResultadoAcao> {
   const auth = await autorizar("config:editar");
   if ("erro" in auth) {
     return { ok: false, motivo: auth.erro };
   }
-  const m = lerModo(modo, estacaoId);
+  const m = lerModo(modo, estacaoId, setorId);
   if ("erro" in m) {
     return { ok: false, motivo: m.erro };
   }
   try {
-    await configurarTelaNoTenant(auth.sessao, id, { nome, modo: m.modo, estacaoId: m.estacaoId });
+    await configurarTelaNoTenant(auth.sessao, id, {
+      nome,
+      modo: m.modo,
+      estacaoId: m.estacaoId,
+      setorId: m.setorId,
+    });
     revalidatePath("/config/telas");
     return { ok: true };
   } catch (erro) {

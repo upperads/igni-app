@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { configurarTela, listarTelas, registrarTela, resolverTelaPorToken, revogarTela } from "@/application/tela";
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { estacao, tela, tenant, usuario } from "@/infra/db/schema";
+import { estacao, setor, tela, tenant, usuario } from "@/infra/db/schema";
 import { notificarPainel } from "@/infra/realtime/notificar";
 import { createTestDatabase, resetAndMigrate } from "@/test/db";
 
@@ -28,6 +28,7 @@ describe("aplicação — tela", () => {
   beforeEach(async () => {
     await database.db.delete(tela);
     await database.db.delete(estacao);
+    await database.db.delete(setor);
     await database.db.delete(usuario);
     await database.db.delete(tenant);
     const [a] = await database.db.insert(tenant).values({ nome: "A", templateRamo: "retifica_leve" }).returning();
@@ -43,8 +44,8 @@ describe("aplicação — tela", () => {
   });
 
   it("registra e lista só as do próprio tenant", async () => {
-    await registrarTela(database, sessaoA(), { nome: "TV Bloco", modo: "estacao", estacaoId: estacaoA });
-    await registrarTela(database, sessaoB(), { nome: "Outra", modo: "geral", estacaoId: null });
+    await registrarTela(database, sessaoA(), { nome: "TV Bloco", modo: "estacao", estacaoId: estacaoA, setorId: null });
+    await registrarTela(database, sessaoB(), { nome: "Outra", modo: "geral", estacaoId: null, setorId: null });
     const a = await listarTelas(database, sessaoA());
     expect(a).toHaveLength(1);
     expect(a[0]!.nome).toBe("TV Bloco");
@@ -53,12 +54,12 @@ describe("aplicação — tela", () => {
 
   it("REJEITA registrar modo=estacao sem estação (invariante)", async () => {
     await expect(
-      registrarTela(database, sessaoA(), { nome: "X", modo: "estacao", estacaoId: null }),
+      registrarTela(database, sessaoA(), { nome: "X", modo: "estacao", estacaoId: null, setorId: null }),
     ).rejects.toThrow(DadosInvalidosError);
   });
 
   it("resolverTelaPorToken devolve o registro do tenant certo pelo token cru", async () => {
-    const { token } = await registrarTela(database, sessaoA(), { nome: "TV Bloco", modo: "estacao", estacaoId: estacaoA });
+    const { token } = await registrarTela(database, sessaoA(), { nome: "TV Bloco", modo: "estacao", estacaoId: estacaoA, setorId: null });
     const r = await resolverTelaPorToken(database, token);
     expect(r).not.toBeNull();
     expect(r!.tenantId).toBe(tenantA);
@@ -67,7 +68,7 @@ describe("aplicação — tela", () => {
   });
 
   it("token de tela REVOGADA não resolve", async () => {
-    const { token } = await registrarTela(database, sessaoA(), { nome: "TV", modo: "geral", estacaoId: null });
+    const { token } = await registrarTela(database, sessaoA(), { nome: "TV", modo: "geral", estacaoId: null, setorId: null });
     const [t] = await listarTelas(database, sessaoA());
     await revogarTela(database, sessaoA(), t!.id);
     expect(await resolverTelaPorToken(database, token)).toBeNull();
@@ -78,10 +79,27 @@ describe("aplicação — tela", () => {
   });
 
   it("configurarTela dispara notificarPainel com o tenant (o push pra TV)", async () => {
-    await registrarTela(database, sessaoA(), { nome: "TV", modo: "geral", estacaoId: null });
+    await registrarTela(database, sessaoA(), { nome: "TV", modo: "geral", estacaoId: null, setorId: null });
     const [t] = await listarTelas(database, sessaoA());
     vi.mocked(notificarPainel).mockClear();
-    await configurarTela(database, sessaoA(), t!.id, { nome: "TV", modo: "estacao", estacaoId: estacaoA });
+    await configurarTela(database, sessaoA(), t!.id, { nome: "TV", modo: "estacao", estacaoId: estacaoA, setorId: null });
     expect(notificarPainel).toHaveBeenCalledWith(tenantA);
+  });
+
+  it("registra tela modo=setor e resolverTelaPorToken traz o setorId certo", async () => {
+    const [s] = await database.db.insert(setor).values({ tenantId: tenantA, nome: "Usinagem", ordem: 1 }).returning();
+    const setorA = s!.id;
+    const { token } = await registrarTela(database, sessaoA(), {
+      nome: "TV Usinagem",
+      modo: "setor",
+      estacaoId: null,
+      setorId: setorA,
+    });
+    const r = await resolverTelaPorToken(database, token);
+    expect(r).not.toBeNull();
+    expect(r!.tenantId).toBe(tenantA);
+    expect(r!.modo).toBe("setor");
+    expect(r!.estacaoId).toBeNull();
+    expect(r!.setorId).toBe(setorA);
   });
 });

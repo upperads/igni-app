@@ -21,6 +21,7 @@ const NAV = [
 // Itens de configuração — só aparecem para quem pode configurar (dono/gestor).
 const NAV_CONFIG = [
   { href: "/config/equipe", rotulo: "Equipe" },
+  { href: "/config/setores", rotulo: "Setores" },
   { href: "/config/estacoes", rotulo: "Estações" },
   { href: "/config/cargos", rotulo: "Cargos" },
   { href: "/config/telas", rotulo: "Telas" },

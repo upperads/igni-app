@@ -8,13 +8,22 @@ import { dataHora } from "@/ui/format";
 import { acaoConfigurarTela, acaoRegistrarTela, acaoRevogarTela } from "./actions";
 
 type Estacao = { id: string; nome: string };
+type Setor = { id: string; nome: string };
 type NovoQr = { qrDataUrl: string; codigoCurto: string; url: string };
 
 /**
- * Painel das TVs de setor (P-3): registra (QR + código curto, mostrado uma vez), troca remotamente
+ * Painel das TVs de setor (P-3/P-5a): registra (QR + código curto, mostrado uma vez), troca remotamente
  * o que cada TV mostra — o coração da fatia, dispara o ping via `configurarTelaNoTenant` — e revoga.
  */
-export function PainelTelas({ telas, estacoes }: { telas: TelaView[]; estacoes: Estacao[] }) {
+export function PainelTelas({
+  telas,
+  estacoes,
+  setores,
+}: {
+  telas: TelaView[];
+  estacoes: Estacao[];
+  setores: Setor[];
+}) {
   const router = useRouter();
   const [pendente, iniciar] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
@@ -42,9 +51,10 @@ export function PainelTelas({ telas, estacoes }: { telas: TelaView[]; estacoes: 
             key={t.id}
             tela={t}
             estacoes={estacoes}
+            setores={setores}
             pendente={pendente}
-            onConfigurar={(nome, modo, estacaoId) =>
-              rodar(() => acaoConfigurarTela(t.id, nome, modo, estacaoId))
+            onConfigurar={(nome, modo, estacaoId, setorId) =>
+              rodar(() => acaoConfigurarTela(t.id, nome, modo, estacaoId, setorId))
             }
             onRevogar={() => rodar(() => acaoRevogarTela(t.id))}
           />
@@ -59,11 +69,12 @@ export function PainelTelas({ telas, estacoes }: { telas: TelaView[]; estacoes: 
 
       <NovaTela
         estacoes={estacoes}
+        setores={setores}
         pendente={pendente}
-        onRegistrar={(nome, modo, estacaoId) =>
+        onRegistrar={(nome, modo, estacaoId, setorId) =>
           iniciar(async () => {
             setErro(null);
-            const r = await acaoRegistrarTela(nome, modo, estacaoId);
+            const r = await acaoRegistrarTela(nome, modo, estacaoId, setorId);
             if (!r.ok || !r.qrDataUrl || !r.codigoCurto || !r.url) {
               setErro(r.motivo ?? "Não foi possível registrar a tela. Tente novamente.");
               return;
@@ -126,19 +137,25 @@ function QrRegistrado({ qr, onFechar }: { qr: NovoQr; onFechar: () => void }) {
 function SeletorModo({
   modo,
   estacaoId,
+  setorId,
   estacoes,
+  setores,
   disabled,
   idPrefixo,
   onModo,
   onEstacao,
+  onSetor,
 }: {
   modo: string;
   estacaoId: string | null;
+  setorId: string | null;
   estacoes: Estacao[];
+  setores: Setor[];
   disabled: boolean;
   idPrefixo: string;
   onModo: (m: string) => void;
   onEstacao: (id: string | null) => void;
+  onSetor: (id: string | null) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -150,6 +167,7 @@ function SeletorModo({
         className="rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 font-body text-sm text-aco-100 focus:border-ambar-500 focus:outline-none disabled:opacity-50"
       >
         <option value="estacao">Uma estação</option>
+        <option value="setor">Um setor</option>
         <option value="geral">Visão geral (tudo)</option>
       </select>
       {modo === "estacao" ? (
@@ -168,22 +186,43 @@ function SeletorModo({
           ))}
         </select>
       ) : null}
+      {modo === "setor" ? (
+        <select
+          value={setorId ?? ""}
+          disabled={disabled}
+          onChange={(e) => onSetor(e.target.value || null)}
+          aria-label={`Qual setor a tela ${idPrefixo} mostra`}
+          className="rounded-md border border-grafite-600 bg-grafite-900 px-2 py-1.5 font-body text-sm text-aco-100 focus:border-ambar-500 focus:outline-none disabled:opacity-50"
+        >
+          <option value="">Escolha o setor…</option>
+          {setores.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nome}
+            </option>
+          ))}
+        </select>
+      ) : null}
     </div>
   );
 }
 
 function NovaTela({
   estacoes,
+  setores,
   pendente,
   onRegistrar,
 }: {
   estacoes: Estacao[];
+  setores: Setor[];
   pendente: boolean;
-  onRegistrar: (nome: string, modo: string, estacaoId: string | null) => void;
+  onRegistrar: (nome: string, modo: string, estacaoId: string | null, setorId: string | null) => void;
 }) {
   const [nome, setNome] = useState("");
   const [modo, setModo] = useState("estacao");
   const [estacaoId, setEstacaoId] = useState<string | null>(null);
+  const [setorId, setSetorId] = useState<string | null>(null);
+  const invalido =
+    !nome.trim() || (modo === "estacao" && !estacaoId) || (modo === "setor" && !setorId);
 
   return (
     <section className="rounded-lg border border-grafite-700 bg-grafite-850 p-4">
@@ -199,21 +238,29 @@ function NovaTela({
         <SeletorModo
           modo={modo}
           estacaoId={estacaoId}
+          setorId={setorId}
           estacoes={estacoes}
+          setores={setores}
           disabled={pendente}
           idPrefixo="nova"
-          onModo={setModo}
+          onModo={(m) => {
+            setModo(m);
+            setEstacaoId(null);
+            setSetorId(null);
+          }}
           onEstacao={setEstacaoId}
+          onSetor={setSetorId}
         />
         <div>
           <button
             type="button"
-            disabled={pendente || !nome.trim() || (modo === "estacao" && !estacaoId)}
+            disabled={pendente || invalido}
             onClick={() => {
-              onRegistrar(nome.trim(), modo, estacaoId);
+              onRegistrar(nome.trim(), modo, estacaoId, setorId);
               setNome("");
               setModo("estacao");
               setEstacaoId(null);
+              setSetorId(null);
             }}
             className="rounded-md bg-ambar-500 px-4 py-2 font-display text-sm font-bold text-grafite-900 transition-colors hover:bg-ambar-600 disabled:opacity-50"
           >
@@ -228,22 +275,28 @@ function NovaTela({
 function LinhaTela({
   tela,
   estacoes,
+  setores,
   pendente,
   onConfigurar,
   onRevogar,
 }: {
   tela: TelaView;
   estacoes: Estacao[];
+  setores: Setor[];
   pendente: boolean;
-  onConfigurar: (nome: string, modo: string, estacaoId: string | null) => void;
+  onConfigurar: (nome: string, modo: string, estacaoId: string | null, setorId: string | null) => void;
   onRevogar: () => void;
 }) {
   const [nome, setNome] = useState(tela.nome);
   const [modo, setModo] = useState<string>(tela.modo);
   const [estacaoId, setEstacaoId] = useState<string | null>(tela.estacaoId);
+  const [setorId, setSetorId] = useState<string | null>(tela.setorId);
   const [confirmandoRevogar, setConfirmandoRevogar] = useState(false);
-  const mostraAgora = tela.modo === "geral" ? "Visão geral" : (tela.estacaoNome ?? "—");
-  const mudouAlgo = nome.trim() !== tela.nome || modo !== tela.modo || estacaoId !== tela.estacaoId;
+  const mostraAgora =
+    tela.modo === "geral" ? "Visão geral" : tela.modo === "setor" ? (tela.setorNome ?? "—") : (tela.estacaoNome ?? "—");
+  const mudouAlgo =
+    nome.trim() !== tela.nome || modo !== tela.modo || estacaoId !== tela.estacaoId || setorId !== tela.setorId;
+  const invalido = !nome.trim() || (modo === "estacao" && !estacaoId) || (modo === "setor" && !setorId);
 
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-grafite-700 bg-grafite-850 px-3 py-2.5">
@@ -299,17 +352,24 @@ function LinhaTela({
           <SeletorModo
             modo={modo}
             estacaoId={estacaoId}
+            setorId={setorId}
             estacoes={estacoes}
+            setores={setores}
             disabled={pendente}
             idPrefixo={tela.nome}
-            onModo={setModo}
+            onModo={(m) => {
+              setModo(m);
+              setEstacaoId(null);
+              setSetorId(null);
+            }}
             onEstacao={setEstacaoId}
+            onSetor={setSetorId}
           />
           <div>
             <button
               type="button"
-              disabled={pendente || !mudouAlgo || !nome.trim() || (modo === "estacao" && !estacaoId)}
-              onClick={() => onConfigurar(nome.trim(), modo, estacaoId)}
+              disabled={pendente || !mudouAlgo || invalido}
+              onClick={() => onConfigurar(nome.trim(), modo, estacaoId, setorId)}
               className="rounded-md bg-ambar-500 px-3 py-1.5 font-body text-sm font-medium text-grafite-900 hover:bg-ambar-600 disabled:opacity-50"
             >
               Salvar o que mostra

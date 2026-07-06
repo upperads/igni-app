@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import type { SessaoTenant } from "@/application/abrir-os";
 import {
   configurarTela,
@@ -11,6 +12,7 @@ import {
 } from "@/application/tela";
 import { listarPainel } from "@/infra/composition/os";
 import { database } from "@/infra/db/client";
+import { estacao } from "@/infra/db/schema";
 
 /** Composição das telas (P-3): liga os casos de uso ao tenant. A web importa daqui. */
 export type { TelaView, TelaInput };
@@ -71,6 +73,24 @@ export async function dadosTv(tokenOuCodigo: string): Promise<DadosTv | null> {
       modo: resolvida.modo,
       estacaoId: resolvida.estacaoId,
       estacaoNome,
+      etapas: etapasFiltradas,
+      kpis,
+    };
+  }
+  if (resolvida.modo === "setor" && resolvida.setorId) {
+    // Só as OS das estações do setor da tela: resolve as estações do setor e filtra os cards por elas.
+    const estacoesDoSetor = await database.withTenant(resolvida.tenantId, (tx) =>
+      tx.select({ id: estacao.id }).from(estacao).where(eq(estacao.setorId, resolvida.setorId!)),
+    );
+    const ids = new Set(estacoesDoSetor.map((e) => e.id));
+    const etapasFiltradas = etapas
+      .map((e) => ({ ...e, cards: e.cards.filter((c) => c.estacaoId && ids.has(c.estacaoId)) }))
+      .filter((e) => e.cards.length > 0);
+    return {
+      tenantId: resolvida.tenantId,
+      modo: resolvida.modo,
+      estacaoId: null,
+      estacaoNome: null,
       etapas: etapasFiltradas,
       kpis,
     };

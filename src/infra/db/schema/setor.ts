@@ -1,19 +1,16 @@
 import { integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { setor } from "./setor";
 import { tenant } from "./tenant";
 
 /**
- * Estação de trabalho do setor (ex.: bloco, cabeçote, virabrequim). Pré-carregada na
- * criação da oficina a partir do template do ramo (US-01/US-16). `ordem` define a posição
- * no fluxo. Configurável por tenant (M8) — aqui é o destino do seed do template.
+ * Setor (P-5a): agrupamento físico de estações (ex.: Usinagem = bloco + cabeçote + virabrequim…).
+ * A TV mostra um setor inteiro. `estacao.setor_id` aponta para cá. Config por tenant, com RLS.
  */
-export const estacao = pgTable("estacao", {
+export const setor = pgTable("setor", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id")
     .notNull()
     .references(() => tenant.id, { onDelete: "cascade" }),
   nome: text("nome").notNull(),
   ordem: integer("ordem").notNull(),
-  setorId: uuid("setor_id").references(() => setor.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

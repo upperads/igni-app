@@ -73,5 +73,5 @@ export const origemEvento = pgEnum("origem_evento", [
   "sistema",
 ]);
 
-/** Modo de uma tela (P-3): mostra UMA estação, ou a visão geral (tudo). Espelha `MODOS_TELA` do domínio (teste de drift). */
-export const modoTela = pgEnum("modo_tela", ["estacao", "geral"]);
+/** Modo de uma tela (P-3/P-5a): mostra UMA estação, UM setor, ou a visão geral (tudo). Espelha `MODOS_TELA` do domínio (teste de drift). */
+export const modoTela = pgEnum("modo_tela", ["estacao", "geral", "setor"]);
