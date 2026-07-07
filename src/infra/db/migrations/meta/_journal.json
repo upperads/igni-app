@@ -246,6 +246,13 @@
       "when": 1783380538032,
       "tag": "0034_seed_financeiro_gerir",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1783394335949,
+      "tag": "0035_purple_red_ghost",
+      "breakpoints": true
     }
   ]
 }

@@ -78,3 +78,6 @@ export const modoTela = pgEnum("modo_tela", ["estacao", "geral", "setor"]);
 
 /** Status da conta a receber (P-4a): linha do tempo do dinheiro. Espelha `STATUS_CONTA` do domínio (drift). */
 export const statusConta = pgEnum("status_conta", ["aberta", "recebida", "cancelada"]);
+
+/** Forma de pagamento na baixa (P-4b): como a oficina recebeu. Espelha `FORMAS_PAGAMENTO` do domínio (drift). */
+export const formaPagamento = pgEnum("forma_pagamento", ["dinheiro", "pix", "cartao_debito", "cartao_credito", "transferencia", "boleto"]);
