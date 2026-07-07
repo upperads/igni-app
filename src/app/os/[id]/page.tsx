@@ -167,7 +167,7 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
 
       {podeVerFinanceiro && conta ? (
         <div className="mt-5">
-          <Financeiro conta={conta} osId={os.id} podeCancelar={podeCancelarCobranca} />
+          <Financeiro conta={conta} osId={os.id} podeGerir={podeCancelarCobranca} />
         </div>
       ) : null}
 

@@ -23,7 +23,11 @@ import {
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import { atribuirEstacaoNoTenant } from "@/infra/composition/config";
-import { cancelarContaNoTenant } from "@/infra/composition/conta";
+import {
+  cancelarContaNoTenant,
+  desfazerRecebimentoNoTenant,
+  registrarRecebimentoNoTenant,
+} from "@/infra/composition/conta";
 import {
   abrirOsNoTenant,
   ajustarPrioridadeNoTenant,
@@ -443,5 +447,45 @@ export async function acaoCancelarCobranca(contaId: string, osId: string): Promi
       return { ok: false, motivo: erro.message };
     }
     return { ok: false, motivo: "Não foi possível cancelar a cobrança. Tente novamente." };
+  }
+}
+
+/** P-4b — registra a baixa da conta (aberta → recebida) com a forma de pagamento e a data (=agora). */
+export async function acaoRegistrarRecebimento(
+  contaId: string,
+  osId: string,
+  forma: string,
+): Promise<ResultadoAcao> {
+  const auth = await autorizar("financeiro:gerir");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await registrarRecebimentoNoTenant(auth.sessao, contaId, forma);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível registrar o recebimento. Tente novamente." };
+  }
+}
+
+/** P-4b — desfaz a baixa (recebida → aberta): limpa forma e data, reabre a cobrança. */
+export async function acaoDesfazerRecebimento(contaId: string, osId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("financeiro:gerir");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await desfazerRecebimentoNoTenant(auth.sessao, contaId);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível desfazer o recebimento. Tente novamente." };
   }
 }
