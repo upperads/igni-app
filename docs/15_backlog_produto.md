@@ -175,9 +175,11 @@ físicos**, cada um agrupando várias estações (Usinagem, Bomba e bico, Desmon
 - ✅ **Aprimoramentos (perf navegação + Kanban TV + funde triagem/os)** — NO AR (05/07).
 - ✅ **[F] Bug do card "aguardando aprovação"** — corrigido e NO AR (05/07).
 - ✅ **P-5a (setor agrupando estações + TV por setor)** — NO AR (06/07).
-1. **P-4 (Módulo Financeiro)** — pausado com decisões travadas (P-4a conta a receber: gatilho=orçamento aprovado; tabela `conta_receber` separada; aberta acompanha/recebida congela). **← próximo**
-2. **P-5b/P-5c** — quiosque por setor; card com setor responsável (item I).
-3. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono quando P-4 andar.
+- ✅ **P-4a (conta a receber por OS)** — NO AR (06/07). Nasce no orçamento aprovado com o total; linha do tempo própria (aberta/recebida/cancelada); aberta acompanha, recebida congela, cancelada reabre. Bloco Financeiro no detalhe da OS. Permissão nova `financeiro:gerir` (só gestão/financeiro cancela cobrança; verificado no cloud: Dono/Gestor/Financeiro sim, Recepção não). Tabela `conta_receber` RLS 0032–0034. Spec/plano: `docs/superpowers/*2026-07-06-conta-receber-*`.
+1. **P-4b (registrar pagamento/baixa)** — `aberta`→`recebida`; a máquina do dinheiro já modela a transição (P-4a), só plugar UI + forma/data. **← próximo**
+2. **P-4c (relatório financeiro)** — quanto entrou no período, em aberto, atraso.
+3. **P-5b/P-5c** — quiosque por setor; card com setor responsável (item I).
+4. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono.
 
 > Método: cada uma entra por `/produto` (valida o problema) → `/prioriza` (ordem) → schema-first → fatias
 > testadas, como todo o resto do Igni. Nada aqui é "só codar": são decisões de produto.
