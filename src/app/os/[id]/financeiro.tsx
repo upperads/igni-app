@@ -132,7 +132,8 @@ export function Financeiro({ conta, osId, podeGerir }: { conta: ContaView; osId:
                   <button
                     type="button"
                     onClick={() => setConfirmandoDesfazer(false)}
-                    className="rounded-md px-2 py-1 font-mono text-xs text-aco-400 hover:text-aco-100"
+                    disabled={pendente}
+                    className="rounded-md px-2 py-1 font-mono text-xs text-aco-400 hover:text-aco-100 disabled:opacity-50"
                   >
                     Não
                   </button>

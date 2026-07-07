@@ -44,7 +44,11 @@ export function cancelarConta(database: Database, sessao: SessaoTenant, contaId:
   });
 }
 
-/** Registra a baixa (aberta → recebida) com a forma e a data (=agora). Gate financeiro:gerir na action. */
+/**
+ * Registra a baixa (aberta → recebida) com a forma e a data (=agora). Gate financeiro:gerir na action.
+ * É `async` (ao contrário de `desfazerRecebimento`) porque `validarBaixa` faz um throw síncrono ANTES do
+ * `withTenant`: sem `async`, esse throw escaparia como exceção síncrona em vez de rejeição de Promise.
+ */
 export async function registrarRecebimento(
   database: Database,
   sessao: SessaoTenant,
