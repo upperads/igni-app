@@ -16,6 +16,7 @@ export const PERMISSOES = [
   "cadastro:editar",
   "equipe:gerir",
   "config:editar",
+  "financeiro:gerir",
 ] as const;
 
 export type Permissao = (typeof PERMISSOES)[number];
@@ -29,7 +30,7 @@ export function ehCargoDono(nome: string): boolean {
 }
 
 /** Permissões que um cargo de chão (quiosque) NUNCA pode ter (Piso 2 — regra de ouro). */
-const PROIBIDAS_NO_CHAO: readonly Permissao[] = ["orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca"];
+const PROIBIDAS_NO_CHAO: readonly Permissao[] = ["orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "financeiro:gerir"];
 
 /** Permissões que FORÇAM 2FA (Piso 3). dinheiro:ver NÃO está aqui de propósito. */
 const GATILHOS_2FA: readonly string[] = ["equipe:gerir", "config:editar", "cargo:gerir"];
@@ -87,15 +88,15 @@ export interface SementeCargo {
  */
 export const CARGOS_SEMENTE: readonly SementeCargo[] = [
   { nome: "Dono", sistema: true, chao: false, exige2fa: true,
-    permissoes: ["os:abrir", "os:editar", "os:avancar", "triagem:override", "orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "cadastro:editar", "equipe:gerir", "config:editar"] },
+    permissoes: ["os:abrir", "os:editar", "os:avancar", "triagem:override", "orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "cadastro:editar", "equipe:gerir", "config:editar", "financeiro:gerir"] },
   { nome: "Gestor", sistema: true, chao: false, exige2fa: true,
-    permissoes: ["os:abrir", "os:editar", "os:avancar", "triagem:override", "orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "cadastro:editar", "equipe:gerir", "config:editar"] },
+    permissoes: ["os:abrir", "os:editar", "os:avancar", "triagem:override", "orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "cadastro:editar", "equipe:gerir", "config:editar", "financeiro:gerir"] },
   { nome: "Recepção", sistema: true, chao: false, exige2fa: false,
     permissoes: ["os:abrir", "os:editar", "os:avancar", "orcamento:editar", "dinheiro:ver", "cadastro:editar", "triagem:override"] },
   { nome: "Produção", sistema: true, chao: true, exige2fa: false,
     permissoes: ["os:avancar"] },
   { nome: "Financeiro", sistema: true, chao: false, exige2fa: true,
-    permissoes: ["dinheiro:ver", "orcamento:editar", "os:editar"] },
+    permissoes: ["dinheiro:ver", "orcamento:editar", "os:editar", "financeiro:gerir"] },
   { nome: "Peças/Compras", sistema: true, chao: false, exige2fa: false,
     permissoes: ["dinheiro:ver_peca", "os:avancar"] },
   { nome: "Pós-venda", sistema: true, chao: false, exige2fa: false,

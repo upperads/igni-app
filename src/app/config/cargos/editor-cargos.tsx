@@ -16,9 +16,10 @@ const ROTULO_PERMISSAO: Record<Permissao, string> = {
   "cadastro:editar": "Editar clientes/equipamentos",
   "equipe:gerir": "Gerir equipe",
   "config:editar": "Configurar (estações, quiosque)",
+  "financeiro:gerir": "Gerir financeiro (contas a receber)",
 };
 
-const PROIBIDAS_CHAO: Permissao[] = ["orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca"];
+const PROIBIDAS_CHAO: Permissao[] = ["orcamento:editar", "dinheiro:ver", "dinheiro:ver_peca", "financeiro:gerir"];
 const GATILHOS_2FA: Permissao[] = ["equipe:gerir", "config:editar"];
 
 export function EditorCargos({ cargos }: { cargos: CargoView[] }) {

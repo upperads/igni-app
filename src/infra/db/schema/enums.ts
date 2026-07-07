@@ -75,3 +75,6 @@ export const origemEvento = pgEnum("origem_evento", [
 
 /** Modo de uma tela (P-3/P-5a): mostra UMA estação, UM setor, ou a visão geral (tudo). Espelha `MODOS_TELA` do domínio (teste de drift). */
 export const modoTela = pgEnum("modo_tela", ["estacao", "geral", "setor"]);
+
+/** Status da conta a receber (P-4a): linha do tempo do dinheiro. Espelha `STATUS_CONTA` do domínio (drift). */
+export const statusConta = pgEnum("status_conta", ["aberta", "recebida", "cancelada"]);

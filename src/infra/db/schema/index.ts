@@ -21,3 +21,4 @@ export * from "./servico";
 export * from "./cargo";
 export * from "./tela";
 export * from "./setor";
+export * from "./conta-receber";

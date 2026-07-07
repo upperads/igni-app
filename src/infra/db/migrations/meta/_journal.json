@@ -225,6 +225,27 @@
       "when": 1783370091669,
       "tag": "0031_next_deadpool",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1783380538030,
+      "tag": "0032_tranquil_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1783380538031,
+      "tag": "0033_rls_conta_receber",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1783380538032,
+      "tag": "0034_seed_financeiro_gerir",
+      "breakpoints": true
     }
   ]
 }

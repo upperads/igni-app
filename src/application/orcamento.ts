@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import type { ContextoTransicao, EstadoOS } from "@/domain/os/estado";
 import {
+  calcularOrcamento,
   type CanalAprovacao,
   motivoAprovacaoInterna,
   podeDecidir,
@@ -12,7 +13,7 @@ import {
 } from "@/domain/orcamento/orcamento";
 import { DadosInvalidosError, OsNaoEncontradaError } from "@/domain/shared/errors";
 import type { Database } from "@/infra/db/connection";
-import { evento, orcamento, orcamentoItem, os } from "@/infra/db/schema";
+import { contaReceber, evento, orcamento, orcamentoItem, os } from "@/infra/db/schema";
 import type { SessaoTenant } from "./abrir-os";
 
 const VALIDADE_TOKEN_DIAS = 7;
@@ -158,6 +159,34 @@ export function aprovarOrcamento(
       .update(orcamento)
       .set({ status: "aprovado", aprovadoEm: new Date() })
       .where(eq(orcamento.id, orc.id));
+
+    // P-4a: nasce/atualiza a conta a receber com o total aprovado (mesma transação).
+    const itens = await tx
+      .select({ tipo: orcamentoItem.tipo, valorCentavos: orcamentoItem.valorCentavos, markupPct: orcamentoItem.markupPct })
+      .from(orcamentoItem)
+      .where(eq(orcamentoItem.orcamentoId, orc.id));
+    const { total } = calcularOrcamento(itens);
+
+    const [contaExistente] = await tx
+      .select({ id: contaReceber.id, status: contaReceber.status })
+      .from(contaReceber)
+      .where(eq(contaReceber.orcamentoId, orc.id))
+      .limit(1);
+
+    if (!contaExistente) {
+      await tx.insert(contaReceber).values({
+        tenantId: sessao.tenantId,
+        osId,
+        orcamentoId: orc.id,
+        valorCentavos: total,
+        status: "aberta",
+      });
+    } else if (contaExistente.status === "aberta") {
+      await tx.update(contaReceber).set({ valorCentavos: total }).where(eq(contaReceber.id, contaExistente.id));
+    } else if (contaExistente.status === "cancelada") {
+      await tx.update(contaReceber).set({ valorCentavos: total, status: "aberta" }).where(eq(contaReceber.id, contaExistente.id));
+    }
+    // status === "recebida" → não toca (congela).
 
     if (canal) {
       const [ordem] = await tx.select({ estado: os.estado }).from(os).where(eq(os.id, osId)).limit(1);
