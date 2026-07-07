@@ -176,8 +176,8 @@ físicos**, cada um agrupando várias estações (Usinagem, Bomba e bico, Desmon
 - ✅ **[F] Bug do card "aguardando aprovação"** — corrigido e NO AR (05/07).
 - ✅ **P-5a (setor agrupando estações + TV por setor)** — NO AR (06/07).
 - ✅ **P-4a (conta a receber por OS)** — NO AR (06/07). Nasce no orçamento aprovado com o total; linha do tempo própria (aberta/recebida/cancelada); aberta acompanha, recebida congela, cancelada reabre. Bloco Financeiro no detalhe da OS. Permissão nova `financeiro:gerir` (só gestão/financeiro cancela cobrança; verificado no cloud: Dono/Gestor/Financeiro sim, Recepção não). Tabela `conta_receber` RLS 0032–0034. Spec/plano: `docs/superpowers/*2026-07-06-conta-receber-*`.
-1. **P-4b (registrar pagamento/baixa)** — `aberta`→`recebida`; a máquina do dinheiro já modela a transição (P-4a), só plugar UI + forma/data. **← próximo**
-2. **P-4c (relatório financeiro)** — quanto entrou no período, em aberto, atraso.
+- ✅ **P-4b (registrar pagamento/baixa)** — NO AR (07/07). Baixa **total** (`aberta`→`recebida`) com **forma de pagamento** (dinheiro/pix/cartão débito/cartão crédito/transferência/boleto) e **data** (=agora), mais **desfazer** (`recebida`→`aberta`, limpa forma/data). No bloco Financeiro: "Registrar recebimento" (seletor de forma) e "Desfazer recebimento" (confirmação inline); tudo gated por `financeiro:gerir`. `aprovarOrcamento` intocado — o congelamento automático da conta recebida permanece; só o desfazer manual reabre. 2 colunas na `conta_receber` (`forma_pagamento`/`recebido_em`, nullable) + enum `forma_pagamento`, migration 0035. SEM parcial/fiscal/gateway. Spec/plano: `docs/superpowers/*2026-07-06-registrar-pagamento-p4b*`.
+1. **P-4c (relatório financeiro)** — quanto entrou no período (usa `recebido_em`+`forma_pagamento` da P-4b), em aberto, atraso. **← próximo do financeiro**
 3. **P-5b/P-5c** — quiosque por setor; card com setor responsável (item I).
 4. Refinos e features novas [B,C,D,E,G,H,I,J] — priorizar com o dono.
 
