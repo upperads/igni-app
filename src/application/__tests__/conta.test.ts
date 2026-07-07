@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { abrirOS, type AbrirOSInput, type SessaoTenant } from "@/application/abrir-os";
-import { cancelarConta, contaDaOs } from "@/application/conta";
+import { cancelarConta, contaDaOs, desfazerRecebimento, registrarRecebimento } from "@/application/conta";
 import { executarTransicao } from "@/application/executar-transicao";
 import { aprovarOrcamento, enviarOrcamento, montarOrcamento } from "@/application/orcamento";
 import type { ContextoTransicao, EstadoOS } from "@/domain/os/estado";
@@ -138,7 +138,7 @@ describe("conta a receber — nasce/atualiza no aprovarOrcamento; cancelarConta;
     await aprovarOrcamento(database, sessaoA, osId);
     const conta = await contaDaOs(database, sessaoA, osId);
 
-    // marca recebida diretamente no banco (não há caso de uso de "receber" nesta fatia)
+    // marca recebida diretamente no banco (prova o congelamento automático, independente do caso de uso de receber)
     await database.db.update(contaReceber).set({ status: "recebida" }).where(eq(contaReceber.id, conta!.id));
 
     const [orc] = await database.db.select().from(orcamento).where(eq(orcamento.osId, osId));
@@ -229,5 +229,50 @@ describe("conta a receber — nasce/atualiza no aprovarOrcamento; cancelarConta;
 
     const contaBDepois = await contaDaOs(database, sessaoB, osIdB);
     expect(contaBDepois!.status).toBe("aberta"); // intacta
+  });
+
+  it("registrarRecebimento marca recebida com forma e data (só de aberta)", async () => {
+    const osId = await ateEnviado(sessaoA);
+    await aprovarOrcamento(database, sessaoA, osId);
+    const conta = await contaDaOs(database, sessaoA, osId);
+    await registrarRecebimento(database, sessaoA, conta!.id, "pix");
+    const depois = await contaDaOs(database, sessaoA, osId);
+    expect(depois!.status).toBe("recebida");
+    expect(depois!.formaPagamento).toBe("pix");
+    expect(depois!.recebidoEm).not.toBeNull();
+  });
+
+  it("registrarRecebimento rejeita forma inválida", async () => {
+    const osId = await ateEnviado(sessaoA);
+    await aprovarOrcamento(database, sessaoA, osId);
+    const conta = await contaDaOs(database, sessaoA, osId);
+    await expect(registrarRecebimento(database, sessaoA, conta!.id, "bitcoin")).rejects.toThrow(DadosInvalidosError);
+  });
+
+  it("registrarRecebimento rejeita conta já recebida (só de aberta)", async () => {
+    const osId = await ateEnviado(sessaoA);
+    await aprovarOrcamento(database, sessaoA, osId);
+    const conta = await contaDaOs(database, sessaoA, osId);
+    await registrarRecebimento(database, sessaoA, conta!.id, "dinheiro");
+    await expect(registrarRecebimento(database, sessaoA, conta!.id, "pix")).rejects.toThrow(DadosInvalidosError);
+  });
+
+  it("desfazerRecebimento volta a aberta e limpa forma/data (só de recebida)", async () => {
+    const osId = await ateEnviado(sessaoA);
+    await aprovarOrcamento(database, sessaoA, osId);
+    const conta = await contaDaOs(database, sessaoA, osId);
+    await registrarRecebimento(database, sessaoA, conta!.id, "dinheiro");
+    await desfazerRecebimento(database, sessaoA, conta!.id);
+    const depois = await contaDaOs(database, sessaoA, osId);
+    expect(depois!.status).toBe("aberta");
+    expect(depois!.formaPagamento).toBeNull();
+    expect(depois!.recebidoEm).toBeNull();
+  });
+
+  it("desfazerRecebimento rejeita conta aberta (só de recebida)", async () => {
+    const osId = await ateEnviado(sessaoA);
+    await aprovarOrcamento(database, sessaoA, osId);
+    const conta = await contaDaOs(database, sessaoA, osId);
+    await expect(desfazerRecebimento(database, sessaoA, conta!.id)).rejects.toThrow(DadosInvalidosError);
   });
 });
