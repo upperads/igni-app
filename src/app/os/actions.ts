@@ -23,6 +23,7 @@ import {
 import { DadosInvalidosError } from "@/domain/shared/errors";
 import { type SessaoUsuario, sessaoAtual } from "@/infra/auth/sessao";
 import { atribuirEstacaoNoTenant } from "@/infra/composition/config";
+import { cancelarContaNoTenant } from "@/infra/composition/conta";
 import {
   abrirOsNoTenant,
   ajustarPrioridadeNoTenant,
@@ -422,5 +423,25 @@ export async function acaoAprovarCq(osId: string): Promise<ResultadoAcao> {
       return { ok: false, motivo: erro.message };
     }
     return { ok: false, motivo: "Não foi possível aprovar o CQ. Tente novamente." };
+  }
+}
+
+// --- Financeiro (P-4a) — RBAC: só quem tem financeiro:gerir cancela a cobrança ---
+
+/** P-4a — cancela a conta a receber da OS (aberta → cancelada). A baixa (recebida) é P-4b. */
+export async function acaoCancelarCobranca(contaId: string, osId: string): Promise<ResultadoAcao> {
+  const auth = await autorizar("financeiro:gerir");
+  if ("erro" in auth) {
+    return { ok: false, motivo: auth.erro };
+  }
+  try {
+    await cancelarContaNoTenant(auth.sessao, contaId);
+    revalidarOs(osId);
+    return { ok: true };
+  } catch (erro) {
+    if (erro instanceof DadosInvalidosError) {
+      return { ok: false, motivo: erro.message };
+    }
+    return { ok: false, motivo: "Não foi possível cancelar a cobrança. Tente novamente." };
   }
 }

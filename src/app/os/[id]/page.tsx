@@ -6,6 +6,7 @@ import { calcularBola, sinalDaOs } from "@/domain/os/painel";
 import { diasRestantesAte } from "@/domain/os/triagem";
 import { sessaoAtual } from "@/infra/auth/sessao";
 import { listarEstacoesNoTenant } from "@/infra/composition/config";
+import { contaDaOsNoTenant } from "@/infra/composition/conta";
 import { detalheOs, orcamentoDaOs } from "@/infra/composition/os";
 import { listarServicosNoTenant } from "@/infra/composition/servico";
 import { AppShell } from "@/ui/components/app-shell";
@@ -16,6 +17,7 @@ import { Responsabilizacao } from "@/ui/components/responsabilizacao";
 import { AcoesOs } from "./acoes";
 import { AvisarWhatsapp } from "./avisar-whatsapp";
 import { EstacaoFisica } from "./estacao-fisica";
+import { Financeiro } from "./financeiro";
 import { Orcamento } from "./orcamento";
 import { AcoesTriagem } from "./triagem";
 
@@ -44,13 +46,16 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
     notFound();
   }
 
-  const [orcamento, estacoes, servicos] = await Promise.all([
+  const [orcamento, estacoes, servicos, conta] = await Promise.all([
     orcamentoDaOs(sessao, id),
     listarEstacoesNoTenant(sessao),
     listarServicosNoTenant(sessao),
+    contaDaOsNoTenant(sessao, id),
   ]);
   const podeEditarOrcamento = pode(sessao.permissoes, "orcamento:editar");
   const podeEditarOs = pode(sessao.permissoes, "os:editar");
+  const podeVerFinanceiro = pode(sessao.permissoes, "dinheiro:ver");
+  const podeCancelarCobranca = pode(sessao.permissoes, "financeiro:gerir");
   const proximos = proximosEstados(os.estado);
   const perguntas = quatroPerguntas(os.estado);
   const diasRestantes = diasRestantesAte(os.prazoPrometido, new Date());
@@ -159,6 +164,12 @@ export default async function DetalheOsPage({ params }: { params: Promise<{ id: 
           ) : null}
         </section>
       </div>
+
+      {podeVerFinanceiro && conta ? (
+        <div className="mt-5">
+          <Financeiro conta={conta} osId={os.id} podeCancelar={podeCancelarCobranca} />
+        </div>
+      ) : null}
 
       {/* LINHA DO TEMPO: recolhível */}
       <details className="mt-6 rounded-lg border border-grafite-700 bg-grafite-800">
