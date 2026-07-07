@@ -1,5 +1,5 @@
 import { integer, pgTable, timestamp, unique, uuid } from "drizzle-orm/pg-core";
-import { statusConta } from "./enums";
+import { formaPagamento, statusConta } from "./enums";
 import { orcamento } from "./orcamento";
 import { os } from "./os";
 import { tenant } from "./tenant";
@@ -24,6 +24,8 @@ export const contaReceber = pgTable(
       .references(() => orcamento.id, { onDelete: "cascade" }),
     valorCentavos: integer("valor_centavos").notNull(),
     status: statusConta("status").notNull().default("aberta"),
+    formaPagamento: formaPagamento("forma_pagamento"),
+    recebidoEm: timestamp("recebido_em", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique("conta_receber_orcamento_unico").on(t.orcamentoId)],
